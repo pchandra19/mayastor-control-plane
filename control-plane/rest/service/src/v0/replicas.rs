@@ -23,7 +23,7 @@ async fn put_replica(
         }
         Filter::PoolReplica(pool_id, replica_id) => {
             let node_id = match pool_client().get(Filter::Pool(pool_id.clone()), None).await {
-                Ok(pools) => pool(pool_id.to_string(), pools.into_inner().get(0))?.node(),
+                Ok(pools) => pool(pool_id.to_string(), pools.into_inner().first())?.node(),
                 Err(error) => return Err(RestError::from(error)),
             };
             body.to_request(node_id, pool_id, replica_id)
@@ -53,7 +53,9 @@ async fn destroy_replica(filter: Filter) -> Result<(), RestError<RestJsonError>>
         },
         Filter::PoolReplica(pool_id, replica_id) => {
             let node_id = match replica_client().get(filter, None).await {
-                Ok(replicas) => replica(replica_id.to_string(), replicas.into_inner().get(0))?.node,
+                Ok(replicas) => {
+                    replica(replica_id.to_string(), replicas.into_inner().first())?.node
+                }
                 Err(error) => return Err(RestError::from(error)),
             };
 
@@ -103,7 +105,9 @@ async fn share_replica(
         },
         Filter::PoolReplica(pool_id, replica_id) => {
             let node_id = match replica_client().get(filter, None).await {
-                Ok(replicas) => replica(replica_id.to_string(), replicas.into_inner().get(0))?.node,
+                Ok(replicas) => {
+                    replica(replica_id.to_string(), replicas.into_inner().first())?.node
+                }
                 Err(error) => return Err(RestError::from(error)),
             };
 
@@ -141,7 +145,9 @@ async fn unshare_replica(filter: Filter) -> Result<(), RestError<RestJsonError>>
         },
         Filter::PoolReplica(pool_id, replica_id) => {
             let node_id = match replica_client().get(filter, None).await {
-                Ok(replicas) => replica(replica_id.to_string(), replicas.into_inner().get(0))?.node,
+                Ok(replicas) => {
+                    replica(replica_id.to_string(), replicas.into_inner().first())?.node
+                }
                 Err(error) => return Err(RestError::from(error)),
             };
 
@@ -214,7 +220,7 @@ impl apis::actix_server::Replicas for RestApi {
                 )
                 .await?
                 .into_inner()
-                .get(0),
+                .first(),
         )?;
         Ok(replica.into())
     }
@@ -244,7 +250,7 @@ impl apis::actix_server::Replicas for RestApi {
                 .get(Filter::Replica(id.into()), None)
                 .await?
                 .into_inner()
-                .get(0),
+                .first(),
         )?;
         Ok(replica.into())
     }

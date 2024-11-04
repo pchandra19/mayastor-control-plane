@@ -40,14 +40,7 @@ const LATEST_API_VERSION: &str = "v1beta2";
 /// Determine what we want to do when dealing with errors from the
 /// reconciliation loop
 fn error_policy(_object: Arc<DiskPool>, error: &Error, _ctx: Arc<OperatorContext>) -> Action {
-    let duration = Duration::from_secs(match error {
-        Error::Duplicate { timeout } | Error::SpecError { timeout, .. } => (*timeout).into(),
-
-        Error::ReconcileError { .. } => {
-            return Action::await_change();
-        }
-        _ => BACKOFF_PERIOD,
-    });
+    let duration = Duration::from_secs(BACKOFF_PERIOD);
 
     let when = Utc::now()
         .checked_add_signed(chrono::Duration::from_std(duration).unwrap())

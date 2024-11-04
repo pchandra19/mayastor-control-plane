@@ -366,19 +366,15 @@ impl PoolDisplay {
         let mut pools_labels: Vec<String> = vec![];
         let internal_label = external_utils::dsp_created_by_key();
 
-        match &pool.spec {
-            Some(spec) => match &spec.labels {
-                Some(ds) => {
-                    pools_labels = ds
-                        .iter()
-                        // Dont return the created_by_dsp label for the gets
-                        .filter(|(key, _)| *key != &internal_label)
-                        .map(|(key, value)| format!("{}={}", key, value))
-                        .collect();
-                }
-                None => {}
-            },
-            None => {}
+        if let Some(spec) = &pool.spec {
+            if let Some(ds) = &spec.labels {
+                pools_labels = ds
+                    .iter()
+                    // Dont return the created_by_dsp label for the gets
+                    .filter(|(key, _)| *key != &internal_label)
+                    .map(|(key, value)| format!("{}={}", key, value))
+                    .collect();
+            }
         }
         pools_labels
     }

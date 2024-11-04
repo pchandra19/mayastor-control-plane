@@ -118,7 +118,8 @@ impl EtcdSingletonLock {
     /// # Arguments
     /// * `service_kind` - The type of the service
     /// * `lease_time` - The lease's time to live as a `std::time::Duration`. Another service cannot
-    /// take over until this time elapses without any lease keep alives being sent by the first one.
+    ///   take over until this time elapses without any lease keep alives being sent by the first
+    ///   one.
     ///
     /// Start the `Self` which attempts to get a lease and grab the `service_kind` lock.
     /// A background thread will attempt to keep the lease alive, and will handle reconnections if

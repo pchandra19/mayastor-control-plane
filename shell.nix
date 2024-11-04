@@ -74,7 +74,7 @@ mkShell {
 
   shellHook = ''
     ./scripts/nix/git-submodule-init.sh
-    if [ -z "$CI" ]; then
+    if [ -z "$CI" ] && [ "$IN_NIX_SHELL" == "impure" ]; then
       echo
       pre-commit install
       pre-commit install --hook commit-msg

@@ -26,9 +26,14 @@ pub mod resources;
 pub mod rest_wrapper;
 
 /// Flush traces on `Drop`.
-pub struct TracingFlusher {}
+pub struct TracingFlusher {
+    _span: Option<tracing::span::EnteredSpan>,
+}
 impl Drop for TracingFlusher {
     fn drop(&mut self) {
+        {
+            let _ = self._span.take();
+        }
         utils::tracing_telemetry::flush_traces();
     }
 }
@@ -68,15 +73,19 @@ impl CliArgs {
             Err(_) => FmtLayer::None,
         };
 
+        let jaeger = self.jaeger.as_ref();
+
         utils::tracing_telemetry::TracingTelemetry::builder()
             .with_writer(fmt_layer)
             .with_style(FmtStyle::Pretty)
             .with_colours(false)
-            .with_jaeger(self.jaeger.clone())
+            .with_jaeger(jaeger.cloned())
             .with_tracing_tags(tags)
             .init(env!("CARGO_PKG_NAME"));
 
-        TracingFlusher {}
+        TracingFlusher {
+            _span: jaeger.map(|_| tracing::info_span!(env!("CARGO_PKG_NAME")).entered()),
+        }
     }
 }
 

@@ -162,7 +162,7 @@ async fn thin_provisioning(cluster: &Cluster, volume: Volume) {
         .get(Filter::Pool(cluster.pool(0, 0)), None)
         .await
         .unwrap();
-    let pool = pools.0.get(0).unwrap();
+    let pool = pools.0.first().unwrap();
     let pool_state = pool.state().unwrap();
     let watermark = 16 * 1024 * 1024;
     let free_space = pool_state.capacity - pool_state.used - watermark;

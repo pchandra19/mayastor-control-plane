@@ -131,7 +131,7 @@ async fn rebuild_history_for_full_rebuild() {
     );
 
     assert!(
-        !history.records.get(0).unwrap().is_partial,
+        !history.records.first().unwrap().is_partial,
         "Rebuild type is not Full rebuild"
     );
     // Fetch replicas again.
@@ -163,7 +163,7 @@ async fn rebuild_history_for_full_rebuild() {
     );
 
     assert!(
-        !history.records.get(0).unwrap().is_partial,
+        !history.records.first().unwrap().is_partial,
         "Rebuild type is not Full rebuild in rest"
     );
 }
@@ -287,7 +287,7 @@ async fn rebuild_history_for_partial_rebuild() {
     );
 
     assert!(
-        history.records.get(0).unwrap().is_partial,
+        history.records.first().unwrap().is_partial,
         "Rebuild type is not Partial rebuild"
     );
     let history = api_client
@@ -307,7 +307,7 @@ async fn rebuild_history_for_partial_rebuild() {
     );
 
     assert!(
-        history.records.get(0).unwrap().is_partial,
+        history.records.first().unwrap().is_partial,
         "Rebuild type is not Partial rebuild in rest"
     );
 
@@ -419,7 +419,7 @@ async fn rebuild_partial_disabled() {
     );
 
     assert!(
-        !history.records.get(0).unwrap().is_partial,
+        !history.records.first().unwrap().is_partial,
         "Rebuild type is not Full rebuild"
     );
 
@@ -447,7 +447,7 @@ async fn rebuild_partial_disabled() {
     );
 
     assert!(
-        !history.records.get(0).unwrap().is_partial,
+        !history.records.first().unwrap().is_partial,
         "Rebuild type is not Full rebuild in rest"
     );
 }
@@ -461,7 +461,7 @@ async fn wait_nexus_online(nexus_client: &impl NexusOperations, nexus: NexusId) 
             .get(Filter::Nexus(nexus.clone()), None)
             .await
             .expect("Cant get Nexus object");
-        if let Some(nexus) = nexus.0.get(0) {
+        if let Some(nexus) = nexus.0.first() {
             if nexus.status == NexusStatus::Online {
                 return Ok(());
             }

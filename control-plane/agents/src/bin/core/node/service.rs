@@ -325,7 +325,7 @@ impl Service {
                     );
                 });
                 node_specs.into_iter().for_each(|spec| {
-                    if nodes.get(spec.id()).is_none() {
+                    if !nodes.contains_key(spec.id()) {
                         nodes.insert(
                             spec.id().clone(),
                             Node::new(spec.id().clone(), Some(spec), None),

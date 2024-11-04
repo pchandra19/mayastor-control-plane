@@ -220,6 +220,7 @@ enum NvmePathCacheCommand {
 /// Response objects for NVMe cache commands.
 enum NvmePathCacheCommandResponse {
     /// Negative response, contains extended information about failure.
+    #[allow(dead_code)]
     Nack(String),
     /// Cached instance of an NVMe controller available in the system.
     CachedNvmeControllers(Vec<NvmeController>),

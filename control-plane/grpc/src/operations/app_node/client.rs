@@ -12,11 +12,9 @@ use crate::{
 };
 use stor_port::{
     transport_api::{v0::AppNodes, ReplyError, ResourceKind, TimeoutOptions},
-    types::v0::{
-        openapi::client::Uri,
-        transport::{AppNode, Filter, MessageIdVs},
-    },
+    types::v0::transport::{AppNode, Filter, MessageIdVs},
 };
+use tonic::transport::Uri;
 
 /// RPC App Node Client.
 #[derive(Clone)]

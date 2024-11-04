@@ -6,23 +6,6 @@ use snafu::Snafu;
 #[derive(Debug, Snafu)]
 #[allow(clippy::enum_variant_names)]
 pub enum Error {
-    #[snafu(display(
-        "Failed to reconcile '{}' CRD within set limits, aborting operation",
-        name
-    ))]
-    /// Error generated when the loop stops processing
-    ReconcileError {
-        name: String,
-    },
-    /// Generated when we have a duplicate resource version for a given resource
-    Duplicate {
-        timeout: u32,
-    },
-    /// Spec error
-    SpecError {
-        value: String,
-        timeout: u32,
-    },
     #[snafu(display("Kubernetes client error: {}", source))]
     /// k8s client error
     Kube {
@@ -36,7 +19,6 @@ pub enum Error {
     Response {
         source: clients::tower::ResponseError<RestJsonError>,
     },
-    Noun {},
     #[snafu(display("Invalid cr field : {}", field))]
     InvalidCRField {
         field: String,

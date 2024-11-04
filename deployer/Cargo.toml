@@ -2,7 +2,6 @@
 name = "deployer"
 description = "Deployer of control plane and data plane components"
 version = "1.0.0"
-authors = ["Tiago Castro <tiago.castro@mayadata.io>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -21,17 +20,18 @@ stor-port = { path = "../control-plane/stor-port" }
 rpc = { path = "../rpc" }
 utils = { path = "../utils/utils-lib" }
 grpc = { path = "../control-plane/grpc" }
-clap = { version = "4.4.6", features = ["color", "derive", "env", "string"] }
-tokio = { version = "1.32.0", features = ["full"] }
-tonic = "0.10.2"
-async-trait = "0.1.73"
-strum = "0.25.0"
-strum_macros = "0.25.2"
-paste = "1.0.14"
+clap = { version = "4.5.20", features = ["color", "derive", "env", "string"] }
+tokio = { version = "1.41.0", features = ["full"] }
+tonic = "0.12.3"
+async-trait = "0.1.83"
+hyper-util = "0.1.10"
+strum = "0.26.3"
+strum_macros = "0.26.4"
+paste = "1.0.15"
 humantime = "2.1.0"
-reqwest = { version = "0.11.22", features = ["multipart"] }
-futures = "0.3.28"
-tracing = "0.1.37"
-tracing-subscriber = { version = "0.3.18", features = [ "env-filter" ] }
-tower = { version = "0.4.13", features = [ "timeout", "util" ] }
+reqwest = { version = "0.12.9", default-features = false, features = ["multipart"] }
+futures = "0.3.31"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tower = { version = "0.5.1", features = ["timeout", "util"] }
 events-api = { path = "../utils/dependencies/apis/events" }

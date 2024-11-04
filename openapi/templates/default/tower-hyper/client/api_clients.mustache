@@ -4,9 +4,10 @@ use crate::clients::tower::{
     configuration, Error, RequestError, ResponseContent, ResponseContentUnexpected, ResponseError,
 };
 
-use hyper::service::Service;
+use crate::clients::tower::body::Body;
+use http_body_util::BodyExt;
 use std::sync::Arc;
-use tower::ServiceExt;
+use tower::{Service, ServiceExt};
 
 pub struct {{{classname}}}Client {
     configuration: Arc<configuration::Configuration>,
@@ -212,13 +213,13 @@ impl {{{classname}}} for {{{classname}}}Client {
         {{/isMultipart}}
         {{#hasBodyParam}}
         {{#bodyParam}}
-        let body = hyper::Body::from(
+        let body = Body::from(
             serde_json::to_vec(&{{{paramName}}}).map_err(RequestError::Serde)?,
         );
         {{/bodyParam}}
         {{/hasBodyParam}}
         {{^hasBodyParam}}
-        let body = hyper::Body::empty();
+        let body = Body::empty();
         {{/hasBodyParam}}
         let request = local_var_req_builder.uri(local_var_uri_str).header("content-type", "application/json").body(body).map_err(RequestError::BuildRequest)?;
 
@@ -240,10 +241,15 @@ impl {{{classname}}} for {{{classname}}}Client {
             Ok(ResponseContent { status: local_var_status, body: () })
             {{/returnType}}
             {{#returnType}}
-            let body = hyper::body::to_bytes(local_var_resp.into_body()).await.map_err(|e| ResponseError::PayloadError {
-                status: local_var_status,
-                error: e,
-            })?;
+            let body = local_var_resp
+                .into_body()
+                .collect()
+                .await
+                .map_err(|e| ResponseError::PayloadError {
+                    status: local_var_status,
+                    error: e,
+                })?
+                .to_bytes();
             let local_var_content: {{{returnType}}} =
                 serde_json::from_slice(&body).map_err(|e| {
                     ResponseError::Unexpected(ResponseContentUnexpected {
@@ -255,17 +261,27 @@ impl {{{classname}}} for {{{classname}}}Client {
             {{/returnType}}
             {{/supportMultipleResponses}}
             {{#supportMultipleResponses}}
-            let body = hyper::body::to_bytes(local_var_resp.into_body()).await.map_err(|e| ResponseError::PayloadError {
+            let body = local_var_resp
+                .into_body()
+                .collect()
+                .await
+                .map_err(|e| ResponseError::PayloadError {
                     status: local_var_status,
                     error: e,
-                })?;
+                })?
+                .to_bytes();
             let local_var_content: ResponseContent<{{{operationIdCamelCase}}}Success> = serde_json::from_slice(&body)?;
             let local_var_entity: Option<{{{operationIdCamelCase}}}Success> = serde_json::from_str(&local_var_content).ok();
             let local_var_resp = ResponseContent { status: local_var_status, entity: local_var_entity };
             Ok(local_var_resp)
             {{/supportMultipleResponses}}
         } else {
-            match hyper::body::to_bytes(local_var_resp.into_body()).await {
+            match local_var_resp
+                .into_body()
+                .collect()
+                .await
+                .map(|b| b.to_bytes())
+            {
                 Ok(body) => match serde_json::from_slice::<crate::models::RestJsonError>(&body) {
                     Ok(error) => Err(Error::Response(ResponseError::Expected(ResponseContent {
                         status: local_var_status,

@@ -44,7 +44,9 @@ use tracing::{debug, error, info};
 
 #[derive(Clone, Debug)]
 pub struct UdsConnectInfo {
+    #[allow(dead_code)]
     pub peer_addr: Option<Arc<tokio::net::unix::SocketAddr>>,
+    #[allow(dead_code)]
     pub peer_cred: Option<tokio::net::unix::UCred>,
 }
 

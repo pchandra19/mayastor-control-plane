@@ -348,7 +348,7 @@ async fn resize_with_cluster_capacity_limit_concurrent() {
             let hdl = refp_vol_cli
                 .resize(
                     &ResizeVolume {
-                        uuid: volume_id.try_into().unwrap(),
+                        uuid: volume_id.into(),
                         requested_size: EXPANDED_SIZE,
                         cluster_capacity_limit: Some(4 * EXPANDED_SIZE),
                     },
@@ -391,7 +391,7 @@ async fn grpc_resize_volume_with_limit(
     let volume = volume_client
         .create(
             &CreateVolume {
-                uuid: vol_uuid.try_into().unwrap(),
+                uuid: vol_uuid.into(),
                 size: SIZE,
                 replicas: 2,
                 thin: false,
@@ -420,7 +420,7 @@ async fn grpc_resize_volume_with_limit(
             volume_client
                 .destroy(
                     &DestroyVolume {
-                        uuid: resized_volume.uuid().try_into().unwrap(),
+                        uuid: resized_volume.uuid().into(),
                     },
                     None,
                 )
@@ -434,7 +434,7 @@ async fn grpc_resize_volume_with_limit(
             volume_client
                 .destroy(
                     &DestroyVolume {
-                        uuid: volume.uuid().try_into().unwrap(),
+                        uuid: volume.uuid().into(),
                     },
                     None,
                 )
@@ -452,7 +452,7 @@ async fn create_volumes(volume_client: &dyn VolumeOperations, count: u64) -> Vec
         let volume = volume_client
             .create(
                 &CreateVolume {
-                    uuid: vol_uuid.try_into().unwrap(),
+                    uuid: vol_uuid.into(),
                     size: SIZE,
                     replicas: 1,
                     thin: false,
@@ -463,7 +463,7 @@ async fn create_volumes(volume_client: &dyn VolumeOperations, count: u64) -> Vec
             .await
             .unwrap();
 
-        volumes.push(volume.uuid().try_into().unwrap())
+        volumes.push(volume.uuid().into())
     }
 
     volumes
@@ -495,7 +495,7 @@ async fn resize_replica_space_reclaim() {
     let volume = vol_cli
         .create(
             &CreateVolume {
-                uuid: vol_uuid.try_into().unwrap(),
+                uuid: vol_uuid.into(),
                 size: SIZE,
                 replicas: 2,
                 thin: false,

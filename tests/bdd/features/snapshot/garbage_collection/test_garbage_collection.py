@@ -1,4 +1,5 @@
 """Volume Snapshot garbage collection feature tests."""
+
 import os
 
 import pytest

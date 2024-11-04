@@ -3,9 +3,8 @@ use super::*;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt::Debug};
 
-///
 /// Watch Agent
-
+///
 /// Create new Resource Watch
 /// Uniquely identifiable by resource_id and callback
 pub type CreateWatch = Watch;
@@ -72,22 +71,22 @@ impl Default for WatchResourceId {
         Self::Node(Default::default())
     }
 }
-impl ToString for WatchResourceId {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for WatchResourceId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WatchResourceId::Node(id) => format!("nodes/{id}"),
-            WatchResourceId::Pool(id) => format!("pools/{id}"),
+            WatchResourceId::Node(id) => write!(f, "nodes/{id}"),
+            WatchResourceId::Pool(id) => write!(f, "pools/{id}"),
             WatchResourceId::Replica(id) => {
-                format!("replicas/{id}")
+                write!(f, "replicas/{id}")
             }
             WatchResourceId::ReplicaState(id) => {
-                format!("replicas_state/{id}")
+                write!(f, "replicas_state/{id}")
             }
             WatchResourceId::ReplicaSpec(id) => {
-                format!("replicas_spec/{id}")
+                write!(f, "replicas_spec/{id}")
             }
-            WatchResourceId::Nexus(id) => format!("nexuses/{id}"),
-            WatchResourceId::Volume(id) => format!("volumes/{id}"),
+            WatchResourceId::Nexus(id) => write!(f, "nexuses/{id}"),
+            WatchResourceId::Volume(id) => write!(f, "volumes/{id}"),
         }
     }
 }

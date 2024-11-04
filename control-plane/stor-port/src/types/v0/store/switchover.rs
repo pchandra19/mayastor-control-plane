@@ -83,7 +83,7 @@ impl SwitchOverSpec {
         if let Some(op) = &self.operation {
             match op.operation {
                 Operation::Errored(_) => true,
-                Operation::Successful => matches!(op.result.unwrap_or(false), true),
+                Operation::Successful => op.result.unwrap_or(false),
                 _ => false,
             }
         } else {

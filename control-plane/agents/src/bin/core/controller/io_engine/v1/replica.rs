@@ -73,7 +73,7 @@ impl crate::controller::io_engine::ReplicaListApi for super::RpcClient {
                 request: "list_replicas (uuid)",
             })?;
 
-        match rpc_replicas.get_ref().replicas.get(0) {
+        match rpc_replicas.get_ref().replicas.first() {
             Some(replica) if replica.uuid == replica_id.as_str() => {
                 rpc_replica_to_agent(replica, self.context.node())
             }

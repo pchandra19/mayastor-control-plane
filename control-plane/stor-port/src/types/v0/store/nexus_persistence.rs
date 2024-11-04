@@ -147,7 +147,7 @@ pub async fn delete_all_v1_nexus_info<S: Store>(
     while let Some(prefix) = &last {
         kvs = store.get_values_paged(prefix, etcd_page_limit, "").await?;
 
-        if !first && kvs.get(0).is_some() {
+        if !first && !kvs.is_empty() {
             kvs.remove(0);
         }
         first = false;

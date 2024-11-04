@@ -176,17 +176,13 @@ impl NodeDisplayLabels {
     pub(crate) fn get_node_label_list(node: &openapi::models::Node) -> Vec<String> {
         let mut node_labels: Vec<String> = vec![];
 
-        match &node.spec {
-            Some(ns) => match &ns.labels {
-                Some(ds) => {
-                    node_labels = ds
-                        .iter()
-                        .map(|(key, value)| format!("{}={}", key, value))
-                        .collect();
-                }
-                None => {}
-            },
-            None => {}
+        if let Some(ns) = &node.spec {
+            if let Some(ds) = &ns.labels {
+                node_labels = ds
+                    .iter()
+                    .map(|(key, value)| format!("{}={}", key, value))
+                    .collect();
+            }
         }
         node_labels
     }
@@ -410,29 +406,21 @@ impl NodeDisplay {
         let mut cordon_labels: Vec<String> = vec![];
         let mut drain_labels: Vec<String> = vec![];
 
-        match &node.spec {
-            Some(ns) => match &ns.cordondrainstate {
-                Some(ds) => {
-                    cordon_labels = cordon_labels_from_state(ds);
-                    drain_labels = drain_labels_from_state(ds);
-                }
-                None => {}
-            },
-            None => {}
+        if let Some(ns) = &node.spec {
+            if let Some(ds) = &ns.cordondrainstate {
+                cordon_labels = cordon_labels_from_state(ds);
+                drain_labels = drain_labels_from_state(ds);
+            }
         }
         [cordon_labels, drain_labels].concat()
     }
     /// Get a list of node drain labels.
     pub(crate) fn get_drain_label_list(node: &openapi::models::Node) -> Vec<String> {
         let mut drain_labels: Vec<String> = vec![];
-        match &node.spec {
-            Some(ns) => match &ns.cordondrainstate {
-                Some(ds) => {
-                    drain_labels = drain_labels_from_state(ds);
-                }
-                None => {}
-            },
-            None => {}
+        if let Some(ns) = &node.spec {
+            if let Some(ds) = &ns.cordondrainstate {
+                drain_labels = drain_labels_from_state(ds);
+            }
         }
         drain_labels
     }

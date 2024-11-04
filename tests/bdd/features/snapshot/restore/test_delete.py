@@ -1,4 +1,5 @@
 """Deleting Restored Snapshot Volume feature tests."""
+
 import pytest
 from pytest_bdd import given, scenario, then, when
 

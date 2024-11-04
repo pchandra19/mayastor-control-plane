@@ -31,7 +31,7 @@ fn main() {
 
     tonic_build::configure()
         .build_server(false)
-        .compile(
+        .compile_protos(
             &["protobuf/mayastor.proto"].prefixed(io_api),
             &["protobuf"].prefixed(io_api),
         )
@@ -39,7 +39,7 @@ fn main() {
 
     tonic_build::configure()
         .build_server(true)
-        .compile(
+        .compile_protos(
             &["protobuf/csi.proto"].prefixed(csi_api),
             &["protobuf"].prefixed(csi_api),
         )
@@ -47,7 +47,7 @@ fn main() {
 
     tonic_build::configure()
         .build_server(true)
-        .compile(
+        .compile_protos(
             &[
                 "protobuf/v1/host.proto",
                 "protobuf/v1/replica.proto",
@@ -67,7 +67,7 @@ fn main() {
 
     tonic_build::configure()
         .build_server(true)
-        .compile(
+        .compile_protos(
             &["protobuf/v1-alpha/registration.proto"].prefixed(io_api),
             &["protobuf/v1-alpha"].prefixed(io_api),
         )

@@ -100,8 +100,8 @@ impl PvGarbageCollector {
 
     /// Deletes orphaned volumes (ie volumes with no corresponding PV) which can be useful:
     /// 1. if there is any missed events at startup
-    /// 2. to tackle k8s bug where volumes are leaked when PV deletion is attempted before
-    /// PVC deletion.
+    /// 2. to tackle k8s bug where volumes are leaked when PV deletion is attempted before PVC
+    ///    deletion.
     async fn delete_orphan_volumes(&self) {
         let volumes = self.collect_volume_ids().await;
         if volumes.is_empty() {

@@ -340,8 +340,8 @@ impl NexusTargetNode {
 
     /// Get `Self` with a default set of filters for nodes following the criteria (any order):
     /// 1. The target node should be online.
-    /// 2. Give preference to nodes which have lesser number of active nexuses, for
-    /// proper distribution.
+    /// 2. Give preference to nodes which have lesser number of active nexuses, for proper
+    ///    distribution.
     pub(crate) async fn builder_with_defaults(
         request: impl Into<GetSuitableNodes>,
         registry: &Registry,

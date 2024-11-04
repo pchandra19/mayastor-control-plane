@@ -48,8 +48,8 @@ impl PoolMgr {
             None
         } else {
             Some((
-                std::path::PathBuf::new().join("/tmp/pool/"),
-                std::path::PathBuf::new().join("/host/tmp/pool"),
+                std::path::PathBuf::from("/tmp/pool/"),
+                std::path::PathBuf::from("/host/tmp/pool"),
             ))
         }
     }

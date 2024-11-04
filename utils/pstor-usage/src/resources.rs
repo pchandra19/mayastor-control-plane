@@ -7,6 +7,7 @@ pub(crate) trait ResourceMgr: Send + Sync + FormatSamples {
     /// Create `count` resources.
     async fn create(&self, client: &ApiClient, count: u32) -> anyhow::Result<Self::Output>;
     /// Delete the created resources.
+    #[allow(dead_code)]
     async fn delete(&self, client: &ApiClient, created: Self::Output) -> anyhow::Result<()>;
 }
 

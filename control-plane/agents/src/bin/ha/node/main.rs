@@ -7,6 +7,7 @@ use http::Uri;
 use once_cell::sync::OnceCell;
 use std::{
     net::{IpAddr, SocketAddr},
+    ops::Deref,
     time::Duration,
 };
 use stor_port::{
@@ -198,12 +199,17 @@ fn get_nvme_connection_client(
     socket_path: &std::path::Path,
     timeout_options: TimeoutOptions,
 ) -> NvmeOperationsClient<Channel> {
-    let socket_path_cp = socket_path.to_path_buf();
+    let socket_path_cp = std::sync::Arc::new(socket_path.to_path_buf());
     let channel = Endpoint::try_from("http://[::]:50051")
         .expect("local endpoint should be valid")
         .connect_timeout(timeout_options.connect_timeout())
         .connect_with_connector_lazy(service_fn(move |_: Uri| {
-            UnixStream::connect(socket_path_cp.clone())
+            let path = socket_path_cp.deref().clone();
+            async {
+                Ok::<_, std::io::Error>(hyper_util::rt::TokioIo::new(
+                    UnixStream::connect(path).await?,
+                ))
+            }
         }));
     NvmeOperationsClient::new(channel)
 }

@@ -79,7 +79,7 @@ enum FaultTest {
 
 #[tracing::instrument(skip(cluster))]
 async fn nexus_persistence_test(cluster: &Cluster) {
-    for (local, remote) in &vec![
+    for (local, remote) in &[
         (cluster.node(0), cluster.node(1)),
         (cluster.node(1), cluster.node(0)),
     ] {

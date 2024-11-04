@@ -20,7 +20,7 @@ use composer::{Builder, BuilderConfigure, ComposeTest};
 use futures::future::{join_all, try_join_all};
 use paste::paste;
 use std::{cmp::Ordering, collections::HashMap, convert::TryFrom, str::FromStr};
-use strum_macros::{Display, EnumVariantNames};
+use strum_macros::{Display, VariantNames};
 
 /// Error type used by the deployer.
 pub type Error = Box<dyn std::error::Error>;
@@ -242,7 +242,7 @@ impl Components {
 macro_rules! impl_component {
     ($($name:ident,$order:literal,)+) => {
         /// All the Control Plane Components.
-        #[derive(Debug, Clone, Parser, Display, EnumVariantNames, Eq, PartialEq)]
+        #[derive(Debug, Clone, Parser, Display, VariantNames, Eq, PartialEq)]
         #[clap(about = "Control Plane Components")]
         pub enum Component {
             $(

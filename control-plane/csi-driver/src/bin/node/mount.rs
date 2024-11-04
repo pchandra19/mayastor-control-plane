@@ -81,7 +81,7 @@ pub(super) fn subset(first: &[String], second: &[String]) -> bool {
         if entry == "rw" {
             continue;
         }
-        if set.get(entry).is_none() {
+        if !set.contains(entry) {
             return false;
         }
     }
@@ -258,7 +258,7 @@ pub(crate) fn remount(target: &str, ro: bool) -> Result<Mount, Error> {
         .flags(flags)
         .mount("", target)?;
 
-    debug!("Target {} remounted with {:?}", target, flags);
+    debug!("Target {} remounted with {}", target, flags.bits());
 
     Ok(mount)
 }
@@ -299,7 +299,11 @@ pub(crate) fn blockdevice_mount(
 pub(crate) fn blockdevice_unmount(target: &str) -> Result<(), Error> {
     let flags = UnmountFlags::empty();
 
-    debug!("Unmounting block device {} (flags={:?}) ...", target, flags);
+    debug!(
+        "Unmounting block device {} (flags={}) ...",
+        target,
+        flags.bits()
+    );
 
     unmount(target, flags)?;
     info!("block device at {} has been unmounted", target);

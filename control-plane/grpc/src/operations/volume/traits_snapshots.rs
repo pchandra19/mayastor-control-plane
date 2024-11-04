@@ -489,7 +489,7 @@ impl TryFrom<volume::VolumeSnapshot> for VolumeSnapshot {
             state: VolumeSnapshotState {
                 info,
                 allocated_size: state.state.as_ref().map(|s| s.allocated_size),
-                timestamp: state.state.as_ref().and_then(|s| s.timestamp.clone()),
+                timestamp: state.state.as_ref().and_then(|s| s.timestamp),
                 repl_snapshots: state
                     .replicas
                     .into_iter()
@@ -565,7 +565,6 @@ impl TryFrom<&snapshot::ReplicaSnapshotState> for ReplicaSnapshotState {
                 val.allocated_size,
                 val.num_clones,
                 val.timestamp
-                    .clone()
                     .and_then(|t| std::time::SystemTime::try_from(t).ok())
                     .unwrap_or(UNIX_EPOCH),
                 val.replica_id
@@ -630,7 +629,7 @@ impl TryFrom<VolumeSnapshot> for volume::VolumeSnapshot {
                                     .map(|r| volume::ReplicaSnapshot {
                                         uuid: r.uuid.to_string(),
                                         spec_status: common::SpecStatus::from(&r.status) as i32,
-                                        timestamp: r.timestamp.clone(),
+                                        timestamp: r.timestamp,
                                         txn_id: r.txn_id.clone(),
                                         source_id: r.source_id.to_string(),
                                     })
@@ -668,6 +667,7 @@ impl TryFrom<VolumeSnapshot> for volume::VolumeSnapshot {
                                         name: state.snap_name().to_string(),
                                         entity_id: state.entity_id().to_string(),
                                         status: crate::snapshot::SnapshotStatus::Online as i32,
+                                        #[allow(clippy::unnecessary_fallible_conversions)]
                                         timestamp: state.timestamp().try_into().ok(),
                                         replica_size: state.replica_size(),
                                         allocated_size: state.allocated_size(),

@@ -1,4 +1,5 @@
 """Target Switchover test feature tests."""
+
 import os
 import subprocess
 from urllib.parse import urlparse

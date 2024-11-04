@@ -8,8 +8,6 @@ pub mod macros;
 /// Version 0 of the messages.
 pub mod v0;
 
-pub use macros::*;
-
 use crate::types::v0::transport::{HostNqnParseError, MessageIdVs, VERSION};
 use async_trait::async_trait;
 use dyn_clonable::clonable;
@@ -100,10 +98,10 @@ impl FromStr for MessageId {
         }
     }
 }
-impl ToString for MessageId {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for MessageId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::v0(id) => format!("{VERSION}/{id}"),
+            Self::v0(id) => write!(f, "{VERSION}/{id}"),
         }
     }
 }

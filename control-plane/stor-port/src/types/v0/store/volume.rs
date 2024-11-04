@@ -599,7 +599,7 @@ fn volume_op_deserializer() {
     let tests: Vec<Test> = vec![Test {
         input: r#"{"op":{"Publish":["4ffe7e43-46dd-4912-9d0f-6c9844fa7c6e","4ffe7e43-46dd-4912-9d0f-6c9844fa7c6e",null]}}"#,
         expected: VolumeOperation::PublishOld(OldPublishOperation {
-            node: "4ffe7e43-46dd-4912-9d0f-6c9844fa7c6e".try_into().unwrap(),
+            node: "4ffe7e43-46dd-4912-9d0f-6c9844fa7c6e".into(),
             nexus: "4ffe7e43-46dd-4912-9d0f-6c9844fa7c6e".try_into().unwrap(),
             protocol: None,
         }),

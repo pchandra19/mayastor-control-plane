@@ -33,6 +33,7 @@ pub(crate) struct RpcClient {
     nexus: NexusClient,
     pool: PoolClient,
     snapshot: SnapshotClient,
+    #[allow(dead_code)]
     snapshot_rebuild: SnapshotRebuildClient,
     context: GrpcContext,
 }
@@ -80,6 +81,7 @@ impl RpcClient {
         self.snapshot.clone()
     }
     /// Get the v1 snapshot rebuild client.
+    #[allow(dead_code)]
     fn snap_rebuild(&self) -> SnapshotRebuildClient {
         self.snapshot_rebuild.clone()
     }

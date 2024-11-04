@@ -53,9 +53,7 @@ EOF
       # Use rust-toolchain.toml so the IDE can work correctly but use the
       # RUSTUP_TOOLCHAIN under nix so we can use rustup properly
       export RUSTUP_TOOLCHAIN="$rustup_channel"
-      # Adding ~/.cargo/bin to the path let's us carry on using rustup but it lowers its
-      # priority: https://github.com/rust-lang/cargo/pull/11023
-      export PATH=$RUST_TOOLCHAIN/bin:$PATH:~/.cargo/bin
+      export PATH=$RUST_TOOLCHAIN/bin:$PATH
     else
       uninstall_toolchain
       # Expose this so we can fmt files out of tree, eg: when we rustfmt the openapi in /tmp
@@ -78,4 +76,9 @@ path = "$RUST_TOOLCHAIN"
 EOF
     export PATH=$RUST_TOOLCHAIN/bin:$PATH
   fi
+fi
+
+if [ -d ~/.cargo/bin ]; then
+  # https://github.com/rust-lang/cargo/pull/11023
+  export PATH=$PATH:~/.cargo/bin
 fi

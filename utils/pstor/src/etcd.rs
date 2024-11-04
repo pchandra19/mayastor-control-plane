@@ -279,7 +279,7 @@ impl StoreKv for Etcd {
         while let Some(prefix) = &last {
             values = self.get_values_paged(prefix, limit, &range_end).await?;
 
-            if !first && values.get(0).is_some() {
+            if !first && !values.is_empty() {
                 values.remove(0);
             }
             first = false;

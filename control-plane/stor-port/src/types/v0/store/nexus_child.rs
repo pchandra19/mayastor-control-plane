@@ -39,12 +39,16 @@ impl NexusChild {
     }
 }
 
-impl ToString for NexusChild {
-    fn to_string(&self) -> String {
-        match &self {
-            NexusChild::Replica(replica) => replica.uri().to_string(),
-            NexusChild::Uri(uri) => uri.to_string(),
-        }
+impl std::fmt::Display for NexusChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                NexusChild::Replica(replica) => replica.uri(),
+                NexusChild::Uri(uri) => uri,
+            }
+        )
     }
 }
 

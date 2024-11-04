@@ -11,6 +11,7 @@ extern crate tonic;
 #[allow(clippy::redundant_closure)]
 #[allow(clippy::upper_case_acronyms)]
 #[allow(clippy::derive_partial_eq_without_eq)]
+#[allow(clippy::doc_lazy_continuation)]
 pub mod io_engine {
     use std::{
         future::Future,
@@ -558,6 +559,7 @@ pub mod io_engine {
 
 pub mod csi {
     #![allow(clippy::derive_partial_eq_without_eq)]
+    #![allow(clippy::doc_lazy_continuation)]
     include!(concat!(env!("OUT_DIR"), "/csi.v1.rs"));
 }
 
@@ -565,6 +567,7 @@ pub mod v1 {
     /// The raw protobuf types.
     pub mod pb {
         #![allow(clippy::derive_partial_eq_without_eq)]
+        #![allow(clippy::doc_lazy_continuation)]
         include!(concat!(env!("OUT_DIR"), "/mayastor.v1.rs"));
     }
 

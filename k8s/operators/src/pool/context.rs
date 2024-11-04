@@ -521,7 +521,6 @@ impl ResourceContext {
     /// type_:
     ///     Type of this event (Normal, Warning), new types could be added in
     ///     the  future
-
     async fn k8s_notify(&self, action: &str, reason: &str, message: &str, type_: &str) {
         let client = self.ctx.k8s.clone();
         let ns = self.namespace().expect("must be namespaced");

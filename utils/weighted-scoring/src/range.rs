@@ -28,7 +28,7 @@ impl Ranged {
     /// Create a new `Self` from the given value.
     /// # Warning: the provided value must be within range, otherwise it will be bounded.
     pub(crate) fn new_ranged(value: u64) -> Self {
-        Self(value.max(0).min(100))
+        Self(value.min(100))
     }
     /// Get the inner u64 value of this Ranged wrapper.
     /// The value is guaranteed to be within 0 .. 100.

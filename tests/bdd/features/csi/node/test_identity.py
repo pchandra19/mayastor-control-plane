@@ -1,4 +1,5 @@
 """CSI node Identity RPC tests."""
+
 import os
 import threading
 import time

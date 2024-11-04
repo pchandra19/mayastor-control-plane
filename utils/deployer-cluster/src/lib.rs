@@ -26,6 +26,7 @@ use grpc::{
     },
 };
 use openapi::models::Volume;
+use opentelemetry::trace::TracerProvider;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::Resource;
 use rpc::{
@@ -165,7 +166,7 @@ pub struct Cluster {
     composer: Arc<ComposeTestNt>,
     rest_client: rest_client::RestClient,
     grpc_client: Option<CoreClient>,
-    trace_guard: Arc<tracing::subscriber::DefaultGuard>,
+    trace_guard: Arc<DefaultGuard>,
     builder: ClusterBuilder,
 }
 
@@ -263,7 +264,7 @@ impl Cluster {
                 .get(Filter::Node(node_id.clone()), true, None)
                 .await
                 .expect("Cant get node object");
-            if let Some(node) = node.0.get(0) {
+            if let Some(node) = node.0.first() {
                 if node.state().map(|n| &n.status) == Some(&status) {
                     return Ok(());
                 }
@@ -318,15 +319,20 @@ impl Cluster {
 
     /// Return a grpc handle to the csi-node plugin.
     pub async fn csi_node_client(&self, index: u32) -> Result<CsiNodeClient, Error> {
-        let csi_socket = self.csi_socket(index);
+        let csi_socket = Arc::new(self.csi_socket(index));
 
         let endpoint = tonic::transport::Endpoint::try_from("http://[::]")?
             .connect_timeout(Duration::from_millis(100));
         let channel = loop {
-            let csi_socket = csi_socket.to_string();
+            let csi_socket = csi_socket.clone();
             match endpoint
                 .connect_with_connector(tower::service_fn(move |_: Uri| {
-                    UnixStream::connect(csi_socket.to_string())
+                    let socket = csi_socket.clone();
+                    async move {
+                        Ok::<_, std::io::Error>(hyper_util::rt::TokioIo::new(
+                            UnixStream::connect(socket.deref()).await?,
+                        ))
+                    }
                 }))
                 .await
             {
@@ -353,7 +359,11 @@ impl Cluster {
             .connect_timeout(Duration::from_millis(100));
         let channel = loop {
             match endpoint
-                .connect_with_connector(service_fn(|_: Uri| UnixStream::connect(CSI_SOCKET)))
+                .connect_with_connector(service_fn(|_: Uri| async {
+                    Ok::<_, std::io::Error>(hyper_util::rt::TokioIo::new(
+                        UnixStream::connect(CSI_SOCKET).await?,
+                    ))
+                }))
                 .await
             {
                 Ok(channel) => break channel,
@@ -466,7 +476,7 @@ impl Cluster {
     }
 
     /// openapi rest client v0
-    pub fn rest_v00(&self) -> stor_port::types::v0::openapi::tower::client::direct::ApiClient {
+    pub fn rest_v00(&self) -> openapi::tower::client::direct::ApiClient {
         self.rest_client.v0()
     }
 
@@ -548,7 +558,7 @@ fn option_str<F: ToString>(input: Option<F>) -> String {
     }
 }
 
-/// Run future and compare result with what's expected
+/// Run future and compare result with what's expected.
 /// Expected result should be in the form Result<TestValue,TestValue>
 /// where TestValue is a useful value which will be added to the returned error
 /// string Eg, testing the replica share protocol:
@@ -596,7 +606,7 @@ enum PoolDisk {
 /// Wrapper over a temporary "disk" file, which gets deleted on drop.
 #[derive(Clone)]
 pub struct TmpDiskFile {
-    inner: std::sync::Arc<TmpDiskFileInner>,
+    inner: Arc<TmpDiskFileInner>,
 }
 
 /// Temporary "disk" file, which gets deleted on drop.
@@ -612,7 +622,7 @@ impl TmpDiskFile {
     /// The file is deleted on drop.
     pub fn new(name: &str, size: u64) -> Self {
         Self {
-            inner: std::sync::Arc::new(TmpDiskFileInner::new(name, size)),
+            inner: Arc::new(TmpDiskFileInner::new(name, size)),
         }
     }
     /// Disk URI to be used by the dataplane.
@@ -636,11 +646,7 @@ impl TmpDiskFileInner {
         let path = Self::make_path(name);
         Self {
             // the io-engine is setup with a bind mount from /tmp to /host/tmp
-            uri: format!(
-                "aio:///host{}?blk_size=512&uuid={}",
-                path,
-                transport::PoolId::new()
-            ),
+            uri: format!("aio:///host{}?blk_size=512&uuid={}", path, PoolId::new()),
             path,
             cleanup: true,
         }
@@ -707,7 +713,7 @@ impl ClusterBuilder {
             trace: true,
             env_filter: None,
             bearer_token: None,
-            rest_timeout: std::time::Duration::from_secs(5),
+            rest_timeout: Duration::from_secs(5),
             grpc_timeout: grpc_timeout_opts(),
         }
         .with_default_tracing()
@@ -749,6 +755,7 @@ impl ClusterBuilder {
         self.env_filter = self.env_filter.map(|f| {
             f.add_directive(Directive::from_str("stor_port=warn").unwrap())
                 .add_directive(Directive::from_str("deployer_cluster=warn").unwrap())
+                .add_directive(Directive::from_str("h2=off").unwrap())
         });
         self
     }
@@ -1031,7 +1038,7 @@ impl ClusterBuilder {
                 ));
 
                 global::set_text_map_propagator(TraceContextPropagator::new());
-                let tracer = opentelemetry_otlp::new_pipeline()
+                let provider = opentelemetry_otlp::new_pipeline()
                     .tracing()
                     .with_exporter(
                         opentelemetry_otlp::new_exporter()
@@ -1039,10 +1046,16 @@ impl ClusterBuilder {
                             .with_endpoint("http://127.0.0.1:4317"),
                     )
                     .with_trace_config(
-                        sdktrace::config().with_resource(Resource::new(tracing_tags)),
+                        sdktrace::Config::default().with_resource(Resource::new(tracing_tags)),
                     )
-                    .install_simple()
+                    // TODO: there's currently a few bugs on opentelemetry
+                    // 1. We can't use simple exporter on a tokio environment
+                    // 2. Even wit the tokio batch exporter, we can't shutdown properly,
+                    // meaning that we might not flush traces to jaeger :(
+                    .install_batch(opentelemetry_sdk::runtime::TokioCurrentThread)
                     .expect("Should be able to initialise the exporter");
+                global::set_tracer_provider(provider.clone());
+                let tracer = provider.tracer("tracing-otel-subscriber");
                 let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
                 tracing::subscriber::set_default(subscriber.with(telemetry))
             }

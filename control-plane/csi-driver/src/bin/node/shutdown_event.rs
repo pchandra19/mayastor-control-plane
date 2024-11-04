@@ -129,7 +129,7 @@ mod tests {
             .await;
         println!("Second Request Status: {second_response:?}");
         // should fail because we've started to shutdown!
-        assert_eq!(second_response.unwrap_err().code(), Code::Unknown);
+        assert_eq!(second_response.unwrap_err().code(), Code::Cancelled);
 
         // 4. the initial request should complete gracefully
         let first_request_resp = first_request.await.unwrap();

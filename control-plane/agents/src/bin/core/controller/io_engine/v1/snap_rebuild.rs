@@ -123,7 +123,7 @@ mod test {
         let replica_api = api_client.replicas_api();
         let replicas = replica_api.get_replicas().await.unwrap();
         let replica = replicas.first().unwrap();
-        let replica_uuid: ReplicaId = replica.uuid.try_into().unwrap();
+        let replica_uuid: ReplicaId = replica.uuid.into();
         let lock = Arc::new(tokio::sync::Mutex::new(()));
         let one_s = std::time::Duration::from_secs(1);
         let ctx = GrpcContext::new(

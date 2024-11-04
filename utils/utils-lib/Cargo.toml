@@ -3,23 +3,28 @@ name = "utils"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["rls-ring"]
+rls = ["event-publisher/rls-aws-lc-rs"]
+rls-ring = ["event-publisher/rls-ring"]
+
 [dependencies]
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
-tracing-opentelemetry = "0.23.0"
-tracing = "0.1.37"
+tracing-opentelemetry = "0.27.0"
+tracing = "0.1.40"
 
-opentelemetry = { version = "0.22.0" }
+opentelemetry = { version = "0.26.0" }
 
-opentelemetry_sdk = { version = "0.22.1", features = ["rt-tokio-current-thread"] }
-opentelemetry-otlp = { version = "0.15.0" }
-opentelemetry-semantic-conventions = "0.14.0"
+opentelemetry_sdk = { version = "0.26.0", features = ["rt-tokio-current-thread"] }
+opentelemetry-otlp = { version = "0.26.0" }
+opentelemetry-semantic-conventions = "0.26.0"
 
-url = "2.4.1"
-strum = "0.25.0"
-strum_macros = "0.25.2"
-heck = "0.4.1"
+url = "2.5.2"
+strum = "0.26.3"
+strum_macros = "0.26.4"
+heck = "0.5.0"
 
 version-info = { path = "../dependencies/version-info", default-features = false }
 git-version-macro = { path = "../dependencies/git-version-macro" }
-event-publisher = { path = "../dependencies/event-publisher" }
+event-publisher = { path = "../dependencies/event-publisher", default-features = false }
 tracing-filter = { path = "../dependencies/tracing-filter" }

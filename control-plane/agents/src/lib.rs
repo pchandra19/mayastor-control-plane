@@ -44,7 +44,7 @@ impl ServiceEmpty {
     pub fn with_service<S>(mut self, svc: S) -> Service
     where
         S: tower::Service<
-                http::Request<hyper::body::Body>,
+                http::Request<tonic::body::BoxBody>,
                 Response = http::Response<tonic::body::BoxBody>,
                 Error = std::convert::Infallible,
             > + tonic::server::NamedService
@@ -79,7 +79,7 @@ impl Service {
     pub fn with_service<S>(self, svc: S) -> Self
     where
         S: tower::Service<
-                http::Request<hyper::body::Body>,
+                http::Request<tonic::body::BoxBody>,
                 Response = http::Response<tonic::body::BoxBody>,
                 Error = std::convert::Infallible,
             > + tonic::server::NamedService

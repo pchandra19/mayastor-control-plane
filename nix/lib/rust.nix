@@ -8,8 +8,8 @@ in
 rec {
   inherit makeRustTarget;
   rust_default = { override ? { } }: rec {
-    nightly_pkg = pkgs.rust-bin.nightly."2023-10-05";
-    stable_pkg = pkgs.rust-bin.stable."1.72.1";
+    nightly_pkg = pkgs.rust-bin.nightly."2024-10-30";
+    stable_pkg = pkgs.rust-bin.stable."1.82.0";
 
     nightly = nightly_pkg.default.override (override);
     stable = stable_pkg.default.override (override);

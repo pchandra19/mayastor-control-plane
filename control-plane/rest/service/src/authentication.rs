@@ -1,7 +1,7 @@
 use actix_web::HttpRequest;
 use jsonwebtoken::{crypto, Algorithm, DecodingKey};
 
-use http::HeaderValue;
+use actix_web::http;
 use std::fs::File;
 
 use snafu::{ResultExt, Snafu};
@@ -27,7 +27,7 @@ pub enum AuthError {
     InvalidToken { details: String },
 }
 
-/// Initialise JWK with the contents of the file at 'jwk_path'.
+/// Initialize JWK with the contents of the file at 'jwk_path'.
 /// If jwk_path is 'None', authentication is disabled.
 pub fn init(jwk_path: Option<String>) -> JsonWebKey {
     match jwk_path {
@@ -135,7 +135,7 @@ pub fn authenticate(req: &HttpRequest) -> Result<(), AuthError> {
 
 // Ensure the token is formatted correctly by removing the "Bearer " prefix if
 // present.
-fn format_token(token: &HeaderValue) -> Result<String, AuthError> {
+fn format_token(token: &http::header::HeaderValue) -> Result<String, AuthError> {
     let token = token
         .to_str()
         .context(InvalidTokenStr)?

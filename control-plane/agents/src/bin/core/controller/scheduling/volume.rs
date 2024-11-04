@@ -597,6 +597,7 @@ impl AddVolumeNexusReplicas {
     /// 1. replicas which are not part of the given nexus already
     /// 2. use only replicas which report the status of online by their state
     /// 3. use only replicas which are large enough for the volume
+    ///
     /// Sorted by:
     /// 1. nexus local replicas
     /// 2. replicas which have never been marked as faulted by io-engine

@@ -58,7 +58,7 @@ async fn grpc_create_volume_with_limit(
     let volume = volume_client
         .create(
             &CreateVolume {
-                uuid: vol_uuid.try_into().unwrap(),
+                uuid: vol_uuid.into(),
                 size,
                 replicas: 1,
                 cluster_capacity_limit: capacity,
@@ -72,7 +72,7 @@ async fn grpc_create_volume_with_limit(
             volume_client
                 .destroy(
                     &DestroyVolume {
-                        uuid: vol_uuid.try_into().unwrap(),
+                        uuid: vol_uuid.into(),
                     },
                     None,
                 )

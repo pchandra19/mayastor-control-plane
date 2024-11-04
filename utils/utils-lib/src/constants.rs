@@ -1,4 +1,4 @@
-/// Various common constants used by the control plane.
+//! Various common constants used by the control plane.
 
 /// Branch specific image tag to test against.
 /// Example, used to test against a particular branch of the dataplane.

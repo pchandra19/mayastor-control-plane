@@ -1,22 +1,18 @@
 use deployer_cluster::ClusterBuilder;
 use grpc::operations::volume::traits::VolumeOperations;
 use http::{Request, Response};
+use hyper_util::rt::TokioIo;
 use once_cell::sync::OnceCell;
 use std::{convert::Infallible, net::SocketAddr, str::FromStr, time::Duration};
 use stor_port::{
     pstor::{etcd::Etcd, ObjectKey, StoreKv},
     types::v0::{
-        openapi::{
-            client::hyper::{
-                service::{make_service_fn, service_fn},
-                Body, Server,
-            },
-            models,
-        },
+        openapi::{client::hyper::service::service_fn, models},
         transport::{CreateVolume, Volume, VolumeId, WatchResourceId},
     },
 };
-use tokio::net::TcpStream;
+use tokio::net::{TcpListener, TcpStream};
+use tonic::body::BoxBody;
 
 static CALLBACK: OnceCell<tokio::sync::mpsc::Sender<()>> = OnceCell::new();
 
@@ -37,17 +33,28 @@ async fn setup_watch(client: &dyn VolumeOperations) -> (Volume, tokio::sync::mps
     let (s, r) = tokio::sync::mpsc::channel(1);
     CALLBACK.set(s).unwrap();
 
-    async fn notify(_req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    async fn notify(_req: Request<hyper::body::Incoming>) -> Result<Response<BoxBody>, Infallible> {
         CALLBACK.get().cloned().unwrap().send(()).await.unwrap();
-        Ok(Response::new(Body::empty()))
+        Ok(Response::new(BoxBody::default()))
     }
 
-    let make_service = make_service_fn(|_conn| async { Ok::<_, Infallible>(service_fn(notify)) });
-
     let addr = SocketAddr::from(([10, 1, 0, 1], 8082));
-    let server = Server::bind(&addr).serve(make_service);
+    let listener = TcpListener::bind(addr).await.unwrap();
     tokio::spawn(async move {
-        server.await.unwrap();
+        use hyper::server::conn::http1;
+        loop {
+            let (stream, _) = listener.accept().await.unwrap();
+            let io = TokioIo::new(stream);
+
+            tokio::task::spawn(async move {
+                if let Err(err) = http1::Builder::new()
+                    .serve_connection(io, service_fn(notify))
+                    .await
+                {
+                    println!("Error serving connection: {:?}", err);
+                }
+            });
+        }
     });
 
     // wait until the "callback" server is running

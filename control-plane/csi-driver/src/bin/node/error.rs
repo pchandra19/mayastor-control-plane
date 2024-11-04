@@ -12,6 +12,7 @@ pub(crate) struct DeviceError {
 }
 
 /// Possible device error kind sources.
+#[allow(dead_code)]
 pub(crate) enum DeviceErrorSource {
     None,
     NvmeError(NvmeError),

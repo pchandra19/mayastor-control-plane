@@ -271,6 +271,7 @@ pub(crate) trait ResourceSnapshotting {
         request: &Self::Create,
     ) -> Result<Self::CreateOutput, SvcError>;
     /// List snapshots from the `Self` resource.
+    #[allow(unused)]
     async fn list_snaps(
         &self,
         registry: &Registry,

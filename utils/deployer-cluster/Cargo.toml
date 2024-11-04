@@ -1,35 +1,34 @@
 [package]
 name = "deployer-cluster"
 version = "1.0.0"
-authors = ["Tiago Castro <tiago.castro@mayadata.io>"]
 edition = "2021"
 description = "Create and Manage local deployer clusters"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.32.0", features = ["full"] }
-openapi = { path = "../../openapi", features = [ "tower-client", "tower-trace" ] }
+tokio = { version = "1.41.0", features = ["full"] }
+openapi = { path = "../../openapi", features = ["tower-client", "tower-trace"] }
 composer = { path = "../../utils/dependencies/composer", default-features = false }
 deployer = { path = "../../deployer" }
 rpc = { path = "../../rpc" }
 csi-driver = { path = "../../control-plane/csi-driver" }
 utils = { path = "../../utils/utils-lib" }
-anyhow = "1.0.75"
+anyhow = "1.0.92"
 stor-port = { path = "../../control-plane/stor-port" }
-clap = { version = "4.4.6", features = ["derive", "env", "string"] }
-backtrace = "0.3.69"
-etcd-client = "0.12.1"
+clap = { version = "4.5.20", features = ["derive", "env", "string"] }
+backtrace = "0.3.74"
+etcd-client = "0.14.0"
 grpc = { path = "../../control-plane/grpc" }
-tonic = "0.10.2"
-tower = { version = "0.4.13", features = [ "timeout", "util" ] }
+tonic = "0.12.3"
+tower = { version = "0.5.1", features = ["timeout", "util"] }
+hyper-util = "0.1.10"
 # Tracing
-tracing = "0.1.37"
-tracing-subscriber = { version = "0.3.18", features = [ "env-filter" ] }
-tracing-opentelemetry = "0.23.0"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tracing-opentelemetry = "0.27.0"
 # Open Telemetry
-opentelemetry = { version = "0.22.0" }
-opentelemetry_sdk = { version = "0.22.1", features = ["rt-tokio-current-thread"] }
-opentelemetry-otlp = { version = "0.15.0" }
-opentelemetry-semantic-conventions = "0.14.0"
-opentelemetry-jaeger = "0.21.0"
+opentelemetry = { version = "0.26.0" }
+opentelemetry_sdk = { version = "0.26.0", features = ["rt-tokio-current-thread"] }
+opentelemetry-otlp = { version = "0.26.0" }
+opentelemetry-semantic-conventions = "0.26.0"

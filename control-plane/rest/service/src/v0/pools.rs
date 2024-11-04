@@ -17,7 +17,7 @@ async fn destroy_pool(filter: Filter) -> Result<(), RestError<RestJsonError>> {
         },
         Filter::Pool(pool_id) => {
             let node_id = match client().get(filter, None).await {
-                Ok(pools) => pool(pool_id.to_string(), pools.into_inner().get(0))?.node(),
+                Ok(pools) => pool(pool_id.to_string(), pools.into_inner().first())?.node(),
                 Err(error) => return Err(RestError::from(error)),
             };
             DestroyPool {
@@ -59,7 +59,7 @@ impl apis::actix_server::Pools for RestApi {
                 .get(Filter::NodePool(node_id.into(), pool_id.into()), None)
                 .await?
                 .into_inner()
-                .get(0),
+                .first(),
         )?;
         Ok(pool.into())
     }
@@ -80,7 +80,7 @@ impl apis::actix_server::Pools for RestApi {
                 .get(Filter::Pool(pool_id.clone().into()), None)
                 .await?
                 .into_inner()
-                .get(0),
+                .first(),
         )?;
         Ok(pool.into())
     }

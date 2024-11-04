@@ -1,5 +1,6 @@
 use clap::Parser;
 use openapi::tower::client::Url;
+
 use plugin::{operations::Operations, rest_wrapper::RestClient, ExecuteOperation};
 use snafu::ResultExt;
 use std::env;
@@ -24,10 +25,9 @@ struct CliArgs {
 async fn main() {
     let cli_args = CliArgs::args();
     let _trace_flush = cli_args.args.init_tracing();
-
     if let Err(error) = cli_args.execute().await {
         eprintln!("{error}");
-        std::process::exit(1);
+        std::process::exit(-1);
     }
 }
 
@@ -43,10 +43,16 @@ impl CliArgs {
     fn args() -> Self {
         CliArgs::parse()
     }
+
     async fn execute(&self) -> Result<(), Error> {
         // todo: client connection is lazy, we should do sanity connection test here.
         //  Example, we can use use rest liveness probe.
-        RestClient::init(self.rest.clone(), *self.args.timeout).context(RestClientSnafu)?;
+        RestClient::init(
+            self.rest.clone(),
+            self.args.jaeger.is_some(),
+            *self.args.timeout,
+        )
+        .context(RestClientSnafu)?;
         self.operation
             .execute(&self.args)
             .await

@@ -16,7 +16,6 @@ use crate::{
 };
 use pstor::ApiVersion;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 
 /// Replica information
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -233,7 +232,7 @@ impl From<ReplicaSpec> for models::ReplicaSpec {
             src.size,
             src.status,
             src.thin,
-            openapi::apis::Uuid::try_from(src.uuid).unwrap(),
+            openapi::apis::Uuid::from(src.uuid),
             src.kind.into_opt(),
         )
     }

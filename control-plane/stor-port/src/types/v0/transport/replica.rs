@@ -2,7 +2,7 @@ use super::*;
 
 use crate::{types::v0::store::nexus::ReplicaUri, IntoOption};
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, fmt::Debug, ops::Deref, time::SystemTime};
+use std::{fmt::Debug, ops::Deref, time::SystemTime};
 use strum_macros::{Display, EnumString};
 
 /// Get all the replicas from specific node and pool
@@ -541,9 +541,8 @@ impl ReplicaOwners {
     }
     /// Add new nexus owner.
     pub fn add_owner(&mut self, new: &NexusId) {
-        match self.nexuses.iter().find(|nexus| nexus == &new) {
-            None => self.nexuses.push(new.clone()),
-            Some(_) => {}
+        if !self.nexuses.iter().any(|nexus| nexus == new) {
+            self.nexuses.push(new.clone())
         }
     }
 }
@@ -551,11 +550,7 @@ impl ReplicaOwners {
 impl From<ReplicaOwners> for models::ReplicaSpecOwners {
     fn from(src: ReplicaOwners) -> Self {
         Self {
-            nexuses: src
-                .nexuses
-                .iter()
-                .map(|n| apis::Uuid::try_from(n).unwrap())
-                .collect(),
+            nexuses: src.nexuses.iter().map(apis::Uuid::from).collect(),
             volume: src.volume.into_opt(),
         }
     }

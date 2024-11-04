@@ -25,3 +25,4 @@ __pycache__
 /.rust-toolchain
 /rpc/mayastor-api
 /local-fio-0-verify.state
+/report.xml

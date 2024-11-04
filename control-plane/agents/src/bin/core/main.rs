@@ -43,7 +43,7 @@ pub(crate) struct CliArgs {
     pub(crate) reconcile_period: humantime::Duration,
 
     /// The duration for which the reconciler waits for the replica to
-    /// to be healthy again before attempting to online the faulted child.
+    /// be healthy again before attempting to online the faulted child.
     #[clap(long)]
     pub(crate) faulted_child_wait_period: Option<humantime::Duration>,
 
@@ -211,12 +211,10 @@ async fn server(cli_args: CliArgs) -> anyhow::Result<()> {
 
     let service = agents::Service::builder()
         .with_shared_state(
-            utils::tracing_telemetry::global::tracer_provider().versioned_tracer(
-                "core-agent",
-                Some(env!("CARGO_PKG_VERSION")),
-                None::<std::borrow::Cow<'static, str>>,
-                None,
-            ),
+            utils::tracing_telemetry::global::tracer_provider()
+                .tracer_builder("core-agent")
+                .with_version(env!("CARGO_PKG_VERSION"))
+                .build(),
         )
         .with_shared_state(registry.clone())
         .with_shared_state(cli_args.grpc_server_addr)

@@ -1,4 +1,5 @@
 """Pool creation feature tests."""
+
 import http
 
 from pytest_bdd import (

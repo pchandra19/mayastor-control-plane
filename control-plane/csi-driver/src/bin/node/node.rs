@@ -455,6 +455,7 @@ impl node_server::Node for Node {
             SupportedFilesystem(FileSystem),
             UnsupportedFilesystem(CsiAccessTypeError),
             NotAFilesystem,
+            #[allow(dead_code)]
             Unknown(CsiAccessTypeError),
         }
 

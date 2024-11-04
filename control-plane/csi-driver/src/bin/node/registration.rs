@@ -1,13 +1,6 @@
 use crate::{client::AppNodesClientWrapper, shutdown_event::Shutdown};
-use snafu::Snafu;
 use std::{collections::HashMap, time::Duration};
-use tokio::task::JoinError;
 use tracing::error;
-
-#[derive(Debug, Snafu)]
-pub(crate) enum RegistrationError {
-    TokioTaskWait { source: JoinError },
-}
 
 /// Default registration interval.
 const REGISTRATION_INTERVAL_ON_SUCCESS: Duration = Duration::from_secs(60 * 5);

@@ -2,7 +2,7 @@ use crate::infra::{
     async_trait, Builder, ComponentAction, ComposeTest, CsiNode, Error, StartOptions,
 };
 use composer::{Binary, ContainerSpec};
-use std::convert::TryFrom;
+use std::{convert::TryFrom, ops::Deref};
 use tokio::{
     net::UnixStream,
     time::{sleep, Duration},
@@ -202,10 +202,15 @@ impl CsiNode {
             Endpoint::try_from("http://[::]")?.connect_timeout(Duration::from_millis(150));
 
         let channel = loop {
-            let socket = socket.to_string();
+            let socket = std::sync::Arc::new(socket.to_string());
             match endpoint
                 .connect_with_connector(service_fn(move |_: Uri| {
-                    UnixStream::connect(socket.to_string())
+                    let socket = socket.clone();
+                    async move {
+                        Ok::<_, std::io::Error>(hyper_util::rt::TokioIo::new(
+                            UnixStream::connect(socket.deref()).await?,
+                        ))
+                    }
                 }))
                 .await
             {

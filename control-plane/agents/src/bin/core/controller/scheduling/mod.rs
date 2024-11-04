@@ -16,6 +16,7 @@ use weighted_scoring::{Criteria, Value, ValueGrading, WeightedScore};
 #[async_trait::async_trait(?Send)]
 pub(crate) trait ResourcePolicy<Request: ResourceFilter>: Sized {
     fn apply(self, to: Request) -> Request;
+    #[allow(dead_code)]
     fn apply_async(self, to: Request) -> Request {
         self.apply(to)
     }
@@ -50,6 +51,7 @@ pub(crate) trait ResourceFilter: Sized {
     fn policy<P: ResourcePolicy<Self>>(self, policy: P) -> Self {
         policy.apply(self)
     }
+    #[allow(dead_code)]
     fn policy_async<P: ResourcePolicy<Self>>(self, policy: P) -> Self {
         policy.apply_async(self)
     }
@@ -61,9 +63,11 @@ pub(crate) trait ResourceFilter: Sized {
         data.list.retain(|v| filter(param, &data.context, v));
         self
     }
+    #[allow(dead_code)]
     fn filter_iter(self, filter: fn(Self) -> Self) -> Self {
         filter(self)
     }
+    #[allow(dead_code)]
     async fn filter_iter_async<F, Fut>(self, filter: F) -> Self
     where
         F: Fn(Self) -> Fut,
@@ -90,6 +94,7 @@ pub(crate) trait ResourceFilter: Sized {
         self
     }
     fn collect(self) -> Vec<Self::Item>;
+    #[allow(dead_code)]
     fn group_by<K, V, F: Fn(&Self::Request, &Vec<Self::Item>) -> HashMap<K, V>>(
         mut self,
         group: F,

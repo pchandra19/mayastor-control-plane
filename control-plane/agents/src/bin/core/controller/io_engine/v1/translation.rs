@@ -52,7 +52,7 @@ impl IoEngineToAgent for v1::host::Filesystem {
             fstype: self.fstype.clone(),
             label: self.label.clone(),
             uuid: self.uuid.clone(),
-            mountpoint: self.mountpoints.get(0).cloned().unwrap_or_default(),
+            mountpoint: self.mountpoints.first().cloned().unwrap_or_default(),
         }
     }
 }
@@ -162,7 +162,6 @@ impl TryIoEngineToAgent for v1::snapshot::NexusCreateSnapshotResponse {
             nexus,
             snap_time: self
                 .snapshot_timestamp
-                .clone()
                 .and_then(|t| std::time::SystemTime::try_from(t).ok())
                 .unwrap_or(UNIX_EPOCH),
             replicas_status: self
@@ -198,7 +197,7 @@ impl TryIoEngineToAgent for v1::snapshot::NexusCreateSnapshotReplicaStatus {
             })?,
             error: match self.status_code {
                 0 => None,
-                errno => Some(nix::errno::Errno::from_i32(errno as i32)),
+                errno => Some(nix::errno::Errno::from_raw(errno as i32)),
             },
         })
     }
@@ -238,7 +237,6 @@ impl TryIoEngineToAgent for v1::snapshot::SnapshotInfo {
             self.snapshot_size,
             self.num_clones,
             self.timestamp
-                .clone()
                 .and_then(|t| std::time::SystemTime::try_from(t).ok())
                 .unwrap_or(UNIX_EPOCH),
             replica_uuid,
@@ -438,7 +436,6 @@ impl IoEngineToAgent for v1::nexus::Child {
                 .unwrap_or(ChildStateReason::Unknown),
             faulted_at: self
                 .fault_timestamp
-                .clone()
                 .and_then(|t| std::time::SystemTime::try_from(t).ok()),
             has_io_log: Some(self.has_io_log),
         }
@@ -743,8 +740,10 @@ impl TryFrom<ExternalType<v1::nexus::RebuildHistoryRecord>> for transport::Rebui
     type Error = SvcError;
     fn try_from(value: ExternalType<v1::nexus::RebuildHistoryRecord>) -> Result<Self, Self::Error> {
         Ok(Self {
+            #[allow(clippy::unnecessary_fallible_conversions)]
             child_uri: transport::ChildUri::try_from(value.0.child_uri)
                 .map_err(|_| SvcError::InvalidArguments {})?,
+            #[allow(clippy::unnecessary_fallible_conversions)]
             src_uri: transport::ChildUri::try_from(value.0.src_uri)
                 .map_err(|_| SvcError::InvalidArguments {})?,
             state: v1::nexus::RebuildJobState::try_from(value.0.state)

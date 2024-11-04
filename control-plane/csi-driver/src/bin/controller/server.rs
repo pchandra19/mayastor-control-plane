@@ -119,10 +119,9 @@ impl CsiServer {
             .add_service(ControllerServer::new(CsiControllerSvc::new(cfg)))
             .serve_with_incoming_shutdown(incoming, shutdown::Shutdown::wait())
             .await
-            .map_err(|error| {
+            .inspect_err(|error| {
                 use stor_port::transport_api::ErrorChain;
                 error!(error = error.full_string(), "NodePluginGrpcServer failed");
-                error
             })?;
         Ok(())
     }

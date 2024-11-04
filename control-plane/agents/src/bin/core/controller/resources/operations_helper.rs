@@ -22,7 +22,7 @@ use stor_port::{
             replica::ReplicaSpec,
             snapshots::volume::VolumeSnapshot,
             volume::{AffinityGroupSpec, VolumeContentSource, VolumeSpec},
-            AsOperationSequencer, OperationMode, OperationSequence, SpecStatus, SpecTransaction,
+            AsOperationSequencer, OperationMode, SpecStatus, SpecTransaction,
         },
         transport::{AppNodeId, NexusId, NodeId, PoolId, ReplicaId, SnapshotId, VolumeId},
     },
@@ -48,9 +48,6 @@ enum SpecError {
         obj_type: StorableObjectType,
         source: serde_json::Error,
     },
-    /// Failed to get entries from the persistent store.
-    #[snafu(display("Key does not contain UUID"))]
-    KeyUuid {},
 }
 
 /// What to do when creation fails.
@@ -188,6 +185,7 @@ pub(crate) trait GuardedOperationsHelper:
 
     /// Validates the outcome of a create step.
     /// In case of an error, the object is set to deleting.
+    #[allow(unused)]
     async fn validate_create_step<R: Send, O>(
         &self,
         registry: &Registry,
@@ -745,21 +743,7 @@ pub(crate) trait SpecOperationsHelper:
         }
         Ok(())
     }
-    fn operation_lock(&self) -> &OperationSequence {
-        self.as_ref()
-    }
-    fn operation_lock_mut(&mut self) -> &mut OperationSequence {
-        self.as_mut()
-    }
 
-    /// Check if the state is in sync with the spec
-    fn state_synced(&self, state: &Self::State) -> bool
-    where
-        Self: PartialEq<Self::State>,
-    {
-        // todo: do the check explicitly on each specialization rather than using PartialEq
-        self == state
-    }
     /// Start a create transaction
     fn start_create_op(&mut self, request: &Self::Create);
     /// Start a destroy transaction

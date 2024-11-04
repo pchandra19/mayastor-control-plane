@@ -11,24 +11,25 @@ pub struct RestClient {
 }
 
 impl RestClient {
-    /// Initialise the URL of the REST server.
-    pub fn init(url: Url, timeout: std::time::Duration) -> Result<()> {
-        REST_SERVER.get_or_try_init(|| Self::new(url, timeout))?;
+    /// Initialize the URL of the REST server.
+    pub fn init(url: Url, tracing: bool, timeout: std::time::Duration) -> Result<()> {
+        REST_SERVER.get_or_try_init(|| Self::new(url, tracing, timeout))?;
         Ok(())
     }
 
-    /// Initialise the URL of the REST server.
+    /// Initialize the URL of the REST server.
     pub fn init_with_config(config: Configuration) -> Result<()> {
         REST_SERVER.get_or_init(|| RestClient::new_with_config(config));
         Ok(())
     }
 
     /// Create new Rest Client.
-    pub fn new(url: Url, timeout: std::time::Duration) -> Result<RestClient> {
+    pub fn new(url: Url, tracing: bool, timeout: std::time::Duration) -> Result<RestClient> {
         // TODO: Support HTTPS Certificates
         let uri = url.as_str().parse()?;
         let cfg = Configuration::builder()
             .with_timeout(timeout)
+            .with_tracing(tracing)
             .build_url(url)
             .map_err(|error| {
                 anyhow::anyhow!(

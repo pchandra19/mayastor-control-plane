@@ -117,7 +117,7 @@ async fn nexus() {
 /// The tests below revolve around transactions and are dependent on the core agent's command line
 /// arguments for timeouts.
 /// This is required because as of now, we don't have a good mocking strategy
-
+///
 /// default timeout options for every rpc request
 fn grpc_timeout_opts() -> TimeoutOptions {
     TimeoutOptions::default()

@@ -35,7 +35,7 @@ async fn create_nexus_sizes() {
         .unwrap();
     let nexus_client = cluster.grpc_client().nexus();
 
-    for size_mb in &vec![6, 10, 100] {
+    for size_mb in &[6, 10, 100] {
         let size = size_mb * 1024 * 1024;
         let disk = || {
             format!("malloc:///disk?size_mb={size_mb}&uuid=281b87d3-0401-459c-a594-60f76d0ce0da")
@@ -70,7 +70,7 @@ async fn create_nexus_sizes() {
         }
     }
 
-    for size_mb in &vec![1, 2, 4] {
+    for size_mb in &[1, 2, 4] {
         let size = size_mb * 1024 * 1024;
         let disk = || {
             format!("malloc:///disk?size_mb={size_mb}&uuid=281b87d3-0401-459c-a594-60f76d0ce0da")

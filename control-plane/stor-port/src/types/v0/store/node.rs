@@ -267,8 +267,8 @@ impl NodeSpec {
 
     /// Ensure the state is consistent with the labels.
     pub fn resolve(&mut self) {
-        match &mut self.cordon_drain_state {
-            Some(ds) => match ds {
+        if let Some(ds) = &mut self.cordon_drain_state {
+            match ds {
                 CordonDrainState::Cordoned(state) => {
                     if state.cordonlabels.is_empty() {
                         self.cordon_drain_state = None;
@@ -286,8 +286,7 @@ impl NodeSpec {
                         }
                     }
                 }
-            },
-            None => {}
+            }
         }
         if !matches!(self.cordon_drain_state, Some(CordonDrainState::Draining(_))) {
             self.remove_all_draining_volumes();

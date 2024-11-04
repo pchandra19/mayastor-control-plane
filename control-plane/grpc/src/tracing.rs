@@ -4,7 +4,6 @@ use opentelemetry::{
     Key, KeyValue,
 };
 use opentelemetry_http::HeaderInjector;
-use opentelemetry_semantic_conventions::trace::RPC_GRPC_STATUS_CODE;
 use std::{future::Future, pin::Pin};
 use tonic::{
     codegen::http::{Request, Response},
@@ -116,7 +115,7 @@ impl<S> OpenTelServerService<S> {
     }
 }
 
-type TonicServerRequest = Request<tonic::transport::Body>;
+type TonicServerRequest = Request<tonic::body::BoxBody>;
 type TonicServerResponse = Response<tonic::body::BoxBody>;
 impl<S> tower::Service<TonicServerRequest> for OpenTelServerService<S>
 where
@@ -140,12 +139,11 @@ where
             return http_service_call(&mut self.service, request);
         }
 
-        let tracer = global::tracer_provider().versioned_tracer(
-            "grpc-server",
-            Some(env!("CARGO_PKG_VERSION")),
-            None::<std::borrow::Cow<'static, str>>,
-            None,
-        );
+        let tracer = global::tracer_provider()
+            .tracer_builder("grpc-server")
+            .with_version(env!("CARGO_PKG_VERSION"))
+            .build();
+
         let extractor = opentelemetry_http::HeaderExtractor(request.headers());
 
         let parent_context =
@@ -239,7 +237,11 @@ fn update_span_from_response<T>(context: opentelemetry::Context, response: &Resp
         }
         None => tonic::Code::Ok,
     };
+    const RPC_GRPC_STATUS_CODE: &str = "rpc.grpc.status_code";
     span.set_attribute(KeyValue::new(RPC_GRPC_STATUS_CODE, grpc_code as i64));
-    span.set_attribute(HTTP_STATUS_CODE.i64(response.status().as_u16() as i64));
+    span.set_attribute(KeyValue::new(
+        HTTP_STATUS_CODE,
+        response.status().as_u16() as i64,
+    ));
     span.end();
 }

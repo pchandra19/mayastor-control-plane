@@ -14,7 +14,7 @@ impl apis::actix_server::Nodes for RestApi {
                 .get(Filter::Node(id.into()), false, None)
                 .await?
                 .into_inner()
-                .get(0),
+                .first(),
         )?;
         Ok(node.into())
     }

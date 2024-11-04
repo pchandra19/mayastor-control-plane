@@ -49,7 +49,7 @@ impl JsonGrpcSvc {
                 })
             }
         };
-        let node = node(request.clone().node, response.into_inner().get(0))?;
+        let node = node(request.clone().node, response.into_inner().first())?;
         let node = node.state().context(NodeNotOnline {
             node: request.node.to_owned(),
         })?;

@@ -52,7 +52,6 @@ impl IoEngineToAgent for v0::block_device::Filesystem {
 }
 
 /// Node Agent Conversions
-
 impl IoEngineToAgent for v0::BlockDevice {
     type AgentMessage = transport::BlockDevice;
     fn to_agent(&self) -> Self::AgentMessage {
@@ -129,7 +128,6 @@ impl TryIoEngineToAgent for v0::ReplicaV2 {
 }
 
 /// Nexus Agent conversions
-
 impl TryIoEngineToAgent for v0::NexusV2 {
     type AgentMessage = transport::Nexus;
 
@@ -321,7 +319,6 @@ impl AgentToIoEngine for transport::DestroyPool {
 }
 
 /// Volume Agent Conversions
-
 impl AgentToIoEngine for transport::CreateNexus {
     type IoEngineMessage = v0::CreateNexusV2Request;
     fn to_rpc(&self) -> Self::IoEngineMessage {

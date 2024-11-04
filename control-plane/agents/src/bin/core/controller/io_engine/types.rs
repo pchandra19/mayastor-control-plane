@@ -10,6 +10,7 @@ pub(crate) use transport::{CreateNexusSnapReplDescr, CreateNexusSnapshot};
 /// A response for the nexus snapshot request.
 pub struct CreateNexusSnapshotResp {
     /// The nexus involved in the snapshot operation.
+    #[allow(unused)]
     pub nexus: transport::Nexus,
     /// Timestamp when the nexus was paused to take the snapshot on all replicas.
     pub snap_time: SystemTime,
@@ -34,6 +35,7 @@ pub(crate) struct RebuildHistoryResp {
 }
 
 /// Create a Snapshot Rebuild on target node where the replica resides on.
+#[allow(dead_code)]
 pub(crate) struct CreateSnapRebuild {
     /// The uuid of the rebuilding replica.
     pub(crate) replica_uuid: transport::ReplicaId,
@@ -41,6 +43,7 @@ pub(crate) struct CreateSnapRebuild {
     pub(crate) source_uri: String,
 }
 /// The status of the snapshot Rebuild.
+#[allow(dead_code)]
 pub(crate) type SnapshotRebuildStatus = rpc::v1::snapshot_rebuild::RebuildStatus;
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -75,13 +78,16 @@ pub(crate) struct SnapshotRebuild {
     pub(crate) end_timestamp: Option<SystemTime>,
 }
 /// List all or a specific snapshot rebuild.
+#[allow(dead_code)]
 pub(crate) struct ListSnapRebuild {
     /// Select a specific target replica.
     pub(crate) uuid: Option<transport::ReplicaId>,
 }
 /// A list of snapshot rebuilds.
+#[allow(dead_code)]
 pub(crate) type ListSnapRebuildRsp = Vec<SnapshotRebuild>;
 /// Destroy a snapshot rebuild.
+#[allow(dead_code)]
 pub(crate) struct DestroySnapRebuild {
     /// The uuid of the particular rebuild to destroy, which is also the uuid of the replica
     /// which is being rebuilt.

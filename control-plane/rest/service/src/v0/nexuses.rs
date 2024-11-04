@@ -15,7 +15,9 @@ async fn destroy_nexus(filter: Filter) -> Result<(), RestError<RestJsonError>> {
         Filter::NodeNexus(node_id, nexus_id) => DestroyNexus::new(node_id, nexus_id),
         Filter::Nexus(nexus_id) => {
             let node_id = match client().get(filter, None).await {
-                Ok(nexuses) => nexus(Some(nexus_id.to_string()), nexuses.into_inner().get(0))?.node,
+                Ok(nexuses) => {
+                    nexus(Some(nexus_id.to_string()), nexuses.into_inner().first())?.node
+                }
                 Err(error) => return Err(RestError::from(error)),
             };
             DestroyNexus::new(node_id, nexus_id)
@@ -71,7 +73,7 @@ impl apis::actix_server::Nexuses for RestApi {
                 .get(Filter::Nexus(nexus_id.into()), None)
                 .await?
                 .into_inner()
-                .get(0),
+                .first(),
         )?;
         Ok(nexus.into())
     }
@@ -90,7 +92,7 @@ impl apis::actix_server::Nexuses for RestApi {
                 .get(Filter::NodeNexus(node_id.into(), nexus_id.into()), None)
                 .await?
                 .into_inner()
-                .get(0),
+                .first(),
         )?;
         Ok(nexus.into())
     }

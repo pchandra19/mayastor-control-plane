@@ -2,7 +2,7 @@ use crate::{
     transport_api::{ReplyError, ReplyErrorKind},
     types::v0::openapi::{
         actix::server::RestError,
-        apis::StatusCode,
+        apis::actix_server::StatusCode,
         models::{rest_json_error::Kind, RestJsonError},
     },
 };

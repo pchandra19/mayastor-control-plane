@@ -360,6 +360,7 @@ impl TryFrom<RebuildHistoryRecord> for RebuildRecord {
     type Error = ReplyError;
     fn try_from(value: RebuildHistoryRecord) -> Result<Self, Self::Error> {
         Ok(RebuildRecord {
+            #[allow(clippy::unnecessary_fallible_conversions)]
             child_uri: match ChildUri::try_from(value.child_uri.as_str()) {
                 Ok(child) => child,
                 Err(e) => {
@@ -370,6 +371,7 @@ impl TryFrom<RebuildHistoryRecord> for RebuildRecord {
                     ))
                 }
             },
+            #[allow(clippy::unnecessary_fallible_conversions)]
             src_uri: match ChildUri::try_from(value.src_uri.as_str()) {
                 Ok(child) => child,
                 Err(e) => {
@@ -575,15 +577,12 @@ impl From<NexusSpec> for nexus::NexusSpec {
                 result: operation.result,
             }),
             nvmf_config: value.nvmf_config.into_opt(),
-            allowed_hosts: match value
+            allowed_hosts: value
                 .allowed_hosts
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<_, _>>()
-            {
-                Ok(host_nqn) => host_nqn,
-                Err(_) => vec![],
-            },
+                .unwrap_or_default(),
         }
     }
 }
@@ -855,7 +854,7 @@ impl ValidateRequestTypes for CreateNexusRequest {
                 Some(owner) => Some(VolumeId::try_from(StringValue(Some(owner)))?),
                 None => None,
             },
-            config: match self.config.clone() {
+            config: match self.config {
                 Some(config) => Some(NexusNvmfConfig::try_from(config)?),
                 None => None,
             },

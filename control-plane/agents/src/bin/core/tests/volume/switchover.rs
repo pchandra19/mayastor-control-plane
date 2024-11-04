@@ -157,7 +157,7 @@ async fn old_nexus_delete_after_vol_destroy() {
         "spec should contain one nexus after vol destroy with old target node unreachable"
     );
 
-    let n = nexus_spec.get(0).unwrap();
+    let n = nexus_spec.first().unwrap();
     assert_eq!(
         n.status,
         SpecStatus::Deleting,
@@ -362,7 +362,7 @@ async fn volume_republish_nexus_recreation() {
         .into_inner();
 
     let replica_node = replicas
-        .get(0)
+        .first()
         .expect("Should have one replica")
         .node
         .as_str();

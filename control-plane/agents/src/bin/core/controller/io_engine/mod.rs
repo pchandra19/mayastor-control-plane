@@ -132,6 +132,7 @@ pub(crate) trait NexusChildApi<Add, Rm, Flt> {
     /// Remove a child from its parent nexus via gRPC.
     async fn remove_child(&self, request: &RemoveNexusChild) -> Result<Rm, SvcError>;
     /// Fault a child from its parent nexus via gRPC.
+    #[allow(unused)]
     async fn fault_child(&self, request: &FaultNexusChild) -> Result<Flt, SvcError>;
 }
 
@@ -150,6 +151,7 @@ where
     }
 
     /// Offline a child within its parent nexus via gRPC.
+    #[allow(unused)]
     async fn offline_child(&self, request: Ctx) -> Result<Nexus, SvcError> {
         self.child_action(NexusChildAction::new(
             request,
@@ -172,6 +174,7 @@ pub(crate) trait NexusSnapshotApi {
 #[async_trait]
 pub(crate) trait NexusChildRebuildApi {
     /// Lists rebuild history for a given nexus.
+    #[allow(unused)]
     async fn get_rebuild_history(
         &self,
         request: &GetRebuildRecord,
@@ -209,6 +212,7 @@ pub(crate) trait ReplicaSnapshotApi {
     ) -> Result<Replica, SvcError>;
 
     /// List snapshot clones.
+    #[allow(unused)]
     async fn list_snapshot_clones(
         &self,
         request: &ListSnapshotClones,
@@ -225,6 +229,7 @@ pub(crate) trait HostApi {
 
 /// Interface for snapshot rebuilding operations.
 #[async_trait]
+#[allow(dead_code)]
 pub(crate) trait SnapshotRebuildApi {
     /// Create a new snapshot rebuild.
     async fn create_snap_rebuild(

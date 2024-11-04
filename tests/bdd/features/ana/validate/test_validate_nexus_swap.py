@@ -1,4 +1,5 @@
 """Swap ANA enabled Nexus on ANA enabled host feature tests."""
+
 from urllib.parse import urlparse
 
 from pytest_bdd import (

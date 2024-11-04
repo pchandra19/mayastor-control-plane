@@ -1,6 +1,6 @@
 fn main() {
     tonic_build::configure()
-        .compile(
+        .compile_protos(
             &[
                 "proto/v1/pool/pool.proto",
                 "proto/v1/replica/replica.proto",

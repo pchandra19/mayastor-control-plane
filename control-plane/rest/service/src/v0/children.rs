@@ -20,7 +20,7 @@ async fn get_children_response(
             Filter::Nexus(id) => Some(id.to_string()),
             _ => None,
         },
-        client().get(filter, None).await?.into_inner().get(0),
+        client().get(filter, None).await?.into_inner().first(),
     )?;
     Ok(nexus.children.into_iter().map(From::from).collect())
 }
@@ -37,7 +37,7 @@ async fn get_child_response(
             Filter::Nexus(id) => Some(id.to_string()),
             _ => None,
         },
-        client().get(filter, None).await?.into_inner().get(0),
+        client().get(filter, None).await?.into_inner().first(),
     )?;
     let child = find_nexus_child(&nexus, &child_id)?;
     Ok(child.into())
@@ -69,7 +69,7 @@ async fn add_child_filtered(
             Filter::Nexus(id) => Some(id.to_string()),
             _ => None,
         },
-        client().get(filter, None).await?.into_inner().get(0),
+        client().get(filter, None).await?.into_inner().first(),
     ) {
         Ok(nexus) => nexus,
         Err(error) => return Err(RestError::from(error)),
@@ -98,7 +98,7 @@ async fn delete_child_filtered(
             Filter::Nexus(id) => Some(id.to_string()),
             _ => None,
         },
-        client().get(filter, None).await?.into_inner().get(0),
+        client().get(filter, None).await?.into_inner().first(),
     ) {
         Ok(nexus) => nexus,
         Err(error) => return Err(RestError::from(error)),

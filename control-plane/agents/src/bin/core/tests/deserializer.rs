@@ -161,9 +161,9 @@ fn test_deserialization_v1_to_v2() {
                 name: "456122b1-7e19-4148-a890-579ca785a119".to_string(),
                 node: "mayastor-node4".into(),
                 children: vec![
-                    NexusChild::Replica(ReplicaUri::new(&ReplicaId::try_from("82779efa-a0c7-4652-a37b-83eefd894714").unwrap(), &ChildUri::try_from("bdev:///82779efa-a0c7-4652-a37b-83eefd894714?uuid=82779efa-a0c7-4652-a37b-83eefd894714").unwrap())),
-                    NexusChild::Replica(ReplicaUri::new(&ReplicaId::try_from("2d98fa96-ac12-40be-acdc-e3559c0b1530").unwrap(), &ChildUri::try_from("nvmf://136.144.51.237:8420/nqn.2019-05.com.org:2d98fa96-ac12-40be-acdc-e3559c0b1530?uuid=2d98fa96-ac12-40be-acdc-e3559c0b1530").unwrap())),
-                    NexusChild::Replica(ReplicaUri::new(&ReplicaId::try_from("620ff519-419a-48d6-97a8-c1ba3260d87e").unwrap(), &ChildUri::try_from("nvmf://136.144.51.239:8420/nqn.2019-05.com.org:620ff519-419a-48d6-97a8-c1ba3260d87e?uuid=620ff519-419a-48d6-97a8-c1ba3260d87e").unwrap()))
+                    NexusChild::Replica(ReplicaUri::new(&ReplicaId::try_from("82779efa-a0c7-4652-a37b-83eefd894714").unwrap(), &ChildUri::from("bdev:///82779efa-a0c7-4652-a37b-83eefd894714?uuid=82779efa-a0c7-4652-a37b-83eefd894714"))),
+                    NexusChild::Replica(ReplicaUri::new(&ReplicaId::try_from("2d98fa96-ac12-40be-acdc-e3559c0b1530").unwrap(), &ChildUri::from("nvmf://136.144.51.237:8420/nqn.2019-05.com.org:2d98fa96-ac12-40be-acdc-e3559c0b1530?uuid=2d98fa96-ac12-40be-acdc-e3559c0b1530"))),
+                    NexusChild::Replica(ReplicaUri::new(&ReplicaId::try_from("620ff519-419a-48d6-97a8-c1ba3260d87e").unwrap(), &ChildUri::from("nvmf://136.144.51.239:8420/nqn.2019-05.com.org:620ff519-419a-48d6-97a8-c1ba3260d87e?uuid=620ff519-419a-48d6-97a8-c1ba3260d87e")))
                 ],
                 size: 2147483648,
                 spec_status: NexusSpecStatus::Created(NexusStatus::Online),

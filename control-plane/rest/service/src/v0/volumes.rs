@@ -78,7 +78,7 @@ impl apis::actix_server::Volumes for RestApi {
                 .get(Filter::Volume(volume_id.into()), false, None, None)
                 .await?
                 .entries
-                .get(0),
+                .first(),
         )?;
         let target = volume
             .state()
@@ -103,7 +103,7 @@ impl apis::actix_server::Volumes for RestApi {
                 .get(Filter::Volume(volume_id.into()), false, None, None)
                 .await?
                 .entries
-                .get(0),
+                .first(),
         )?;
         Ok(volume.into())
     }

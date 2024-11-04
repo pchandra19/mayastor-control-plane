@@ -176,7 +176,7 @@ where
     T: GetHeaderRow,
 {
     fn get_header_row(&self) -> Row {
-        self.get(0)
+        self.first()
             .map(GetHeaderRow::get_header_row)
             .unwrap_or_default()
     }

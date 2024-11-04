@@ -14,28 +14,29 @@ path = "./src/lib.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = [ "rls" ]
-rls = [ "openapi/tower-client-rls" ]
-tls = [ "openapi/tower-client-tls" ]
+default = ["rls"]
+rls = ["openapi/tower-client-rls"]
+tls = ["openapi/tower-client-tls"]
 
 [dependencies]
-openapi = { path = "../../openapi", default-features = false, features = [ "tower-trace" ] }
+tracing = "0.1.40"
+openapi = { path = "../../openapi", default-features = false, features = ["tower-trace"] }
 utils = { path = "../../utils/utils-lib" }
-strum = "0.25.0"
-strum_macros = "0.25.2"
-tokio = { version = "1.32.0" }
-anyhow = "1.0.75"
-async-trait = "0.1.73"
-once_cell = "1.18.0"
-clap = { version = "4.4.6", features = ["color", "derive", "string"] }
+strum = "0.26.3"
+strum_macros = "0.26.4"
+tokio = { version = "1.41.0" }
+anyhow = "1.0.92"
+async-trait = "0.1.83"
+once_cell = "1.20.2"
+clap = { version = "4.5.20", features = ["color", "derive", "string"] }
 prettytable-rs = "0.10.0"
-lazy_static = "1.4.0"
-serde = "1.0.188"
-serde_json = "1.0.107"
-serde_yaml = "0.9.25"
+lazy_static = "1.5.0"
+serde = "1.0.214"
+serde_json = "1.0.132"
+serde_yaml = "0.9.34"
 humantime = "2.1.0"
-chrono = "0.4.31"
-snafu = "0.7.5"
+chrono = "0.4.38"
+snafu = "0.8.5"
 
 [dev-dependencies]
 # Test dependencies

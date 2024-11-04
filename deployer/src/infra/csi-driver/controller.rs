@@ -66,7 +66,11 @@ impl ComponentAction for CsiController {
             Endpoint::try_from("http://[::]:50051")?.connect_timeout(Duration::from_millis(100));
         let channel = loop {
             match endpoint
-                .connect_with_connector(service_fn(|_: Uri| UnixStream::connect(CSI_SOCKET)))
+                .connect_with_connector(service_fn(|_: Uri| async {
+                    Ok::<_, std::io::Error>(hyper_util::rt::TokioIo::new(
+                        UnixStream::connect(CSI_SOCKET).await?,
+                    ))
+                }))
                 .await
             {
                 Ok(channel) => break channel,

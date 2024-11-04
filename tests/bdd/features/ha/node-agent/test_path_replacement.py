@@ -1,4 +1,5 @@
 """Swap ANA enabled Nexus on ANA enabled host feature tests."""
+
 from pytest_bdd import (
     given,
     scenario,

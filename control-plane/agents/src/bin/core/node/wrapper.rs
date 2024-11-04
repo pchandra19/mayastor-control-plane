@@ -502,6 +502,7 @@ impl NodeWrapper {
         self.node_state().grpc_endpoint.to_string()
     }
     /// Get all pools
+    #[allow(unused)]
     pub(crate) fn pools(&self) -> Vec<PoolState> {
         self.resources()
             .pool_states()
@@ -958,10 +959,8 @@ impl NodeStateFetcher {
         &self,
         client: &mut GrpcClient,
     ) -> Result<RebuildHistoryState, SvcError> {
-        let request = ListRebuildRecord::new(
-            Some(MAX_HISTORY_PER_NEXUS),
-            self.rebuild_since_timestamp.clone(),
-        );
+        let request =
+            ListRebuildRecord::new(Some(MAX_HISTORY_PER_NEXUS), self.rebuild_since_timestamp);
         let history = client.list_rebuild_record(&request).await?;
         Ok(RebuildHistoryState {
             max_entries: MAX_HISTORY_PER_NEXUS,
@@ -1037,6 +1036,7 @@ pub(crate) trait ClientOps {
 #[async_trait]
 pub(crate) trait InternalOps {
     /// Get the inner lock, typically used to sync mutating gRPC operations.
+    #[allow(dead_code)]
     async fn grpc_lock(&self) -> Arc<tokio::sync::Mutex<()>>;
     /// Update the node's nexus state information.
     async fn update_nexus_states(&self, ctx: &mut GrpcClient) -> Result<(), SvcError>;
@@ -1053,6 +1053,7 @@ pub(crate) trait InternalOps {
     /// Update a node's replica state information.
     async fn update_replica_state(&self, state: Either<Replica, ReplicaId>);
     /// Update the node's snapshot state information.
+    #[allow(dead_code)]
     async fn update_snapshot_states(&self, ctx: &mut GrpcClient) -> Result<(), SvcError>;
     /// Update a node's snapshot state information.
     async fn update_snapshot_state(&self, state: Either<ReplicaSnapshot, SnapshotId>);
@@ -1067,6 +1068,7 @@ pub(crate) trait InternalOps {
 /// resources, such as pools, replicas and nexuses.
 #[async_trait]
 pub(crate) trait GetterOps {
+    #[allow(unused)]
     async fn pools(&self) -> Vec<PoolState>;
     async fn pool_wrappers(&self) -> Vec<PoolWrapper>;
     async fn pool(&self, pool_id: &PoolId) -> Option<PoolState>;

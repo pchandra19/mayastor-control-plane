@@ -85,7 +85,7 @@ fn volume_app_node(volume: &Volume) -> Option<String> {
         Some(target) => target
             .frontend_nodes
             .as_ref()
-            .and_then(|nodes| nodes.get(0))
+            .and_then(|nodes| nodes.first())
             .map(|node| node.name.clone()),
         None => None,
     }

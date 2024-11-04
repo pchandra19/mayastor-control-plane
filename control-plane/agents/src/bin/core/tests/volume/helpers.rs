@@ -163,7 +163,7 @@ pub(crate) async fn wait_node_online(
             .get(Filter::Node(node_id.clone()), true, None)
             .await
             .expect("Cant get node object");
-        if let Some(node) = node.0.get(0) {
+        if let Some(node) = node.0.first() {
             if node.state().map(|n| &n.status) == Some(&NodeStatus::Online) {
                 return Ok(());
             }

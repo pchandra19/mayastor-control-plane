@@ -14,6 +14,7 @@ members = [
     "control-plane/plugin",
     "k8s/operators",
     "k8s/forward",
+    "k8s/proxy",
     "deployer",
     "openapi",
     "rpc",
@@ -24,6 +25,7 @@ members = [
     "utils/shutdown",
     "utils/weighted-scoring",
     "utils/deployer-cluster",
+    "utils/hyper-body",
     "tests/io-engine",
 ]
 exclude = [

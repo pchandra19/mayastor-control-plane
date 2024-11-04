@@ -56,7 +56,7 @@ where
 
     /// Remove an element from the map.
     pub(crate) fn remove(&mut self, key: &I) {
-        self.map.remove(key);
+        self.map.swap_remove(key);
     }
 
     /// Populate the resource map.
@@ -144,7 +144,7 @@ where
 
     /// Remove an element from the map.
     pub(crate) fn remove(&mut self, key: &I) {
-        self.map.remove(key);
+        self.map.swap_remove(key);
     }
 
     /// Populate the resource map.

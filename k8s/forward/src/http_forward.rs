@@ -2,7 +2,7 @@ use crate::{
     pod_selection::{AnyReady, PodSelection},
     vx::{Pod, Service},
 };
-use hyper::{body, http::uri::Scheme, Response};
+use hyper::{http::uri::Scheme, Response};
 use kube::{
     api::{Api, ListParams},
     ResourceExt,
@@ -107,10 +107,11 @@ impl HttpProxy {
     }
 }
 
-impl hyper::service::Service<hyper::Request<body::Body>> for HttpProxy {
-    type Response = Response<body::Body>;
+impl tower::Service<hyper::Request<kube::client::Body>> for HttpProxy {
+    type Response = Response<kube::client::Body>;
     type Error = kube::Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Response<body::Body>, kube::Error>> + Send>>;
+    type Future =
+        Pin<Box<dyn Future<Output = Result<Response<kube::client::Body>, kube::Error>> + Send>>;
 
     fn poll_ready(
         &mut self,
@@ -119,9 +120,39 @@ impl hyper::service::Service<hyper::Request<body::Body>> for HttpProxy {
         std::task::Poll::Ready(Ok(()))
     }
 
-    fn call(&mut self, request: hyper::Request<body::Body>) -> Self::Future {
+    fn call(&mut self, request: hyper::Request<kube::client::Body>) -> Self::Future {
         let client = self.client.clone();
         Box::pin(async move { client.send(request).await })
+    }
+}
+
+impl tower::Service<hyper::Request<hyper_body::Body>> for HttpProxy {
+    type Response = Response<hyper_body::Body>;
+    type Error = tower::BoxError;
+    type Future =
+        Pin<Box<dyn Future<Output = Result<Response<hyper_body::Body>, tower::BoxError>> + Send>>;
+
+    fn poll_ready(
+        &mut self,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        std::task::Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, request: hyper::Request<hyper_body::Body>) -> Self::Future {
+        let client = self.client.clone();
+        Box::pin(async move {
+            let (parts, body) = request.into_parts();
+            let body = kube::client::Body::from(body.collect_bytes().await?);
+            let request = hyper::Request::from_parts(parts, body);
+
+            let result = client.send(request).await?;
+
+            let (parts, body) = result.into_parts();
+            let body = hyper_body::Body::wrap_body(body).collect_bytes().await?;
+            let body = hyper_body::Body::from(body);
+            Ok(Response::from_parts(parts, body))
+        })
     }
 }
 
