@@ -138,6 +138,9 @@ class Cluster(object):
         for node in ApiClient.nodes_api().get_nodes():
             wait_node_online(node.id)
 
+        if not Cluster.fixture_cleanup():
+            return
+
         # ensure snapshots are all delete
         if snapshots:
             Snapshot.delete_all()

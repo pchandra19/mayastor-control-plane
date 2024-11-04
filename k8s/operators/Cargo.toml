@@ -21,8 +21,8 @@ tls = ["openapi/tower-client-tls"]
 
 [dependencies]
 # CRD
-k8s-openapi = { version = "0.20.0", features = ["v1_22"] }
-kube = { version = "0.87.2", features = ["derive", "runtime"] }
+k8s-openapi = { version = "0.22.0", features = ["v1_24"] }
+kube = { version = "0.94.2", features = ["derive", "runtime"] }
 schemars = { version = "0.8.21" }
 serde = { version = "1.0.214" }
 serde_json = { version = "1.0.132" }

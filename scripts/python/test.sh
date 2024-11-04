@@ -15,6 +15,7 @@ set -e
 
 SCRIPT_DIR="$(dirname "$0")"
 export ROOT_DIR="$SCRIPT_DIR/../.."
+REPORT="$ROOT_DIR/report.xml"
 
 cleanup() {
   "$SCRIPT_DIR"/test-residue-cleanup.sh || true
@@ -51,7 +52,7 @@ fi
 
 # Extra arguments will be provided directly to pytest, otherwise the bdd folder will be tested with default arguments
 if [ $# -eq 0 ]; then
-  pytest "$BDD_TEST_DIR" --durations=20
+  pytest "$BDD_TEST_DIR" --durations=20 --junit-xml="$REPORT"
 else
-  pytest "$@"
+  pytest "$@" --junit-xml="$REPORT"
 fi

@@ -1,0 +1,26 @@
+[package]
+name = "kube-proxy"
+version = "1.0.0"
+edition = "2021"
+description = "Kubernetes OpenApi Client via k8s-proxy"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["rls"]
+rls = ["openapi/tower-client-rls"]
+tls = ["openapi/tower-client-tls"]
+
+[dependencies]
+kube-forward = { path = "../forward" }
+openapi = { path = "../../openapi", default-features = false, features = ["tower-trace"] }
+utils = { path = "../../utils/utils-lib" }
+
+kube = { version = "0.94.2", features = ["derive"] }
+tower = { version = "0.5.1", features = ["timeout", "util"] }
+tonic = "0.12.3"
+hyper-util = { version = "0.1.10", features = ["client", "client-legacy", "http1", "http2", "tokio", "service"] }
+hyper = { version = "1.5.0", features = ["client", "http1", "http2"] }
+hyper-body = { path = "../../utils/hyper-body" }
+
+anyhow = "1.0.92"

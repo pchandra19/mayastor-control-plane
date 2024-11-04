@@ -1,4 +1,5 @@
 use hyper::service::Service;
+use tower::Service as TowerSvc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -16,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     let proxy = kube_forward::HttpProxy::try_default().await?;
-    let mut svc = hyper::service::service_fn(|request: hyper::Request<hyper::body::Body>| {
+    let svc = hyper::service::service_fn(|request: hyper::Request<kube::client::Body>| {
         let mut proxy = proxy.clone();
         async move { proxy.call(request).await }
     });
@@ -24,8 +25,7 @@ async fn main() -> anyhow::Result<()> {
     let request = hyper::Request::builder()
         .method("GET")
         .uri(&format!("{uri}/v0/nodes"))
-        .body(hyper::Body::empty())
-        .unwrap();
+        .body(kube::client::Body::empty())?;
 
     let result = svc.call(request).await?;
     tracing::info!(?result, "http request complete");

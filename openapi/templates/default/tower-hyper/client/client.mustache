@@ -253,7 +253,7 @@ pub enum ResponseError<T> {
     /// Failed to convert the response payload to bytes.
     PayloadError {
         status: hyper::StatusCode,
-        error: hyper::Error,
+        error: tower::BoxError,
     },
     /// The OpenAPI call returned an "unexpected" JSON content.
     Unexpected(ResponseContentUnexpected),
@@ -281,7 +281,7 @@ impl<T: fmt::Debug> error::Error for ResponseError<T> {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             ResponseError::Expected(_) => None,
-            ResponseError::PayloadError { error, .. } => Some(error),
+            ResponseError::PayloadError { error, .. } => Some(error.deref()),
             ResponseError::Unexpected(_) => None,
         }
     }

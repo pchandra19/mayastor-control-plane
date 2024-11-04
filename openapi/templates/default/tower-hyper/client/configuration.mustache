@@ -1,7 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-pub type ReqBody = super::body::Body;
-pub type Body = body::Incoming;
+pub type ReqBody = hyper_body::Body;
 
 pub use hyper::{body, Request, Response, Uri};
 
@@ -25,7 +24,7 @@ use tracing::Span;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 /// Tower Service Error
-pub type BoxedError = Box<dyn std::error::Error + Send + Sync>;
+pub type BoxedError = tower::BoxError;
 
 /// Basic authentication.
 pub type BasicAuth = (String, Option<String>);
@@ -136,7 +135,7 @@ impl ConfigurationBuilder {
         client_service: S,
     ) -> Result<Configuration, Error>
     where
-        S: Service<Request<ReqBody>, Response = Response<Body>> + Sync + Send + Clone + 'static,
+        S: Service<Request<ReqBody>, Response = Response<ReqBody>> + Send + Clone + 'static,
         S::Future: Send + 'static,
         S::Error: Into<BoxedError> + std::fmt::Debug,
     {
@@ -184,7 +183,7 @@ impl Configuration {
         concurrency_limit: Option<usize>,
     ) -> Result<Self, Error>
     where
-        S: Service<Request<ReqBody>, Response = Response<Body>> + Sync + Send + Clone + 'static,
+        S: Service<Request<ReqBody>, Response = Response<ReqBody>> + Send + Clone + 'static,
         S::Future: Send + 'static,
         S::Error: Into<BoxedError> + std::fmt::Debug,
     {
@@ -208,7 +207,7 @@ impl Configuration {
                         tracing::trace!("started {} {}", request.method(), request.uri().path())
                     })
                     .on_response(
-                        |response: &Response<Body>, _latency: Duration, span: &Span| {
+                        |response: &Response<ReqBody>, _latency: Duration, span: &Span| {
                             let status = response.status();
                             span.record("http.status_code", status.as_u16());
                             if status.is_client_error() || status.is_server_error() {
@@ -378,7 +377,7 @@ impl Configuration {
         let uri = url.to_string().parse().map_err(Error::UrlToUri)?;
         Self::new_with_client(
             uri,
-            client,
+            client.map_response(|r| r.map(ReqBody::wrap_body)),
             Some(timeout),
             bearer_access_token,
             trace_requests,
@@ -393,10 +392,11 @@ impl Configuration {
         bearer_access_token: Option<String>,
     ) -> Self
     where
-        S: Service<Request<ReqBody>, Response = Response<B>> + Sync + Send + Clone + 'static,
+        S: Service<Request<ReqBody>, Response = Response<B>> + Send + Clone + 'static,
         S::Future: Send + 'static,
         S::Error: Into<BoxedError> + std::fmt::Debug,
-        B: body::Body<Data = body::Bytes, Error = hyper::Error> + Send + Sync + 'static,
+        B: body::Body<Data = body::Bytes> + Send + 'static,
+        B::Error: Into<BoxedError> + std::fmt::Debug,
     {
         // Transform response body to `hyper::Body` and use type erased error to avoid type
         // parameters.

@@ -247,7 +247,7 @@ def a_full_rebuild_starts_for_unhealthy_child():
     for child in childlist:
         if child["state"] == ChildState("Degraded"):
             assert child["uri"] != pytest.faulted_child_uri
-            assert child["rebuildProgress"] != 0
+            assert child["rebuild_progress"] != 0, f"{child}"
 
 
 @then("a log-based rebuild starts for the unhealthy child")

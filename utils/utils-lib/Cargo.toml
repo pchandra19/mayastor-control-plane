@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = []
+default = ["rls-ring"]
 rls = ["event-publisher/rls-aws-lc-rs"]
 rls-ring = ["event-publisher/rls-ring"]
 

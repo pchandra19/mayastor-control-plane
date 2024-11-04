@@ -165,6 +165,7 @@ pipeline {
           }
           post {
             always {
+              junit 'report.xml'
               sh 'nix-shell --run "./scripts/python/test-residue-cleanup.sh"'
             }
           }
