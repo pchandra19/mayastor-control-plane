@@ -81,46 +81,50 @@ impl FileSystem {
         }
     }
     /// Get a specific filesystem property by specifying the device path.
-    pub(crate) fn property(device: &str, property: &str) -> Result<String, DevInfoError> {
+    pub(crate) fn property(device: String, property: String) -> Result<String, DevInfoError> {
         let probe = Probe::new_from_filename(device)?;
         probe.do_probe()?;
-        probe.lookup_value(property)
+        probe.lookup_value(&property)
     }
 }
 
 #[async_trait]
 pub(crate) trait FileSystemOps: Send + Sync {
     /// Create the filesystem using its fs util.
-    async fn create(&self, device: &str) -> Result<(), Error>;
+    async fn create(&self, device: String) -> Result<(), Error>;
     /// Get the default mount options along with the user passed options for specific filesystems.
     fn mount_flags(&self, mount_flags: Vec<String>) -> Vec<String>;
     /// Unmount the filesystem if the filesystem uuid and the provided uuid differ.
-    fn unmount_on_fs_id_diff(
+    async fn unmount_on_fs_id_diff(
         &self,
-        device_path: &str,
-        fs_staging_path: &str,
-        volume_uuid: &Uuid,
+        device_path: String,
+        fs_staging_path: String,
+        volume_uuid: Uuid,
     ) -> Result<(), Error>;
     /// Repair the filesystem with specific filesystem utility.
     async fn repair(
         &self,
-        device: &str,
-        staging_path: &str,
-        options: &[String],
-        volume_uuid: &Uuid,
+        device: String,
+        staging_path: String,
+        options: Vec<String>,
+        volume_uuid: Uuid,
     ) -> Result<(), Error>;
     /// Set the filesystem uuid.
-    async fn set_uuid(&self, device: &str, volume_uuid: &Uuid) -> Result<(), Error>;
+    async fn set_uuid(&self, device: String, volume_uuid: Uuid) -> Result<(), Error>;
     /// Set the filesystem uuid with repair if needed.
     async fn set_uuid_with_repair(
         &self,
-        device: &str,
-        staging_path: &str,
-        options: &[String],
-        volume_uuid: &Uuid,
+        device: String,
+        staging_path: String,
+        options: Vec<String>,
+        volume_uuid: Uuid,
     ) -> Result<(), Error> {
-        if self.set_uuid(device, volume_uuid).await.is_err() {
-            self.repair(device, staging_path, options, volume_uuid)
+        if self
+            .set_uuid(device.clone(), volume_uuid.clone())
+            .await
+            .is_err()
+        {
+            self.repair(device.clone(), staging_path, options, volume_uuid.clone())
                 .await?;
             self.set_uuid(device, volume_uuid).await?;
         }
@@ -132,7 +136,7 @@ pub(crate) trait FileSystemOps: Send + Sync {
 
 #[async_trait]
 impl FileSystemOps for Ext4Fs {
-    async fn create(&self, device: &str) -> Result<(), Error> {
+    async fn create(&self, device: String) -> Result<(), Error> {
         let binary = "mkfs.ext4";
         let output = Command::new(binary)
             .arg(device)
@@ -146,21 +150,21 @@ impl FileSystemOps for Ext4Fs {
         mount_flags
     }
 
-    fn unmount_on_fs_id_diff(
+    async fn unmount_on_fs_id_diff(
         &self,
-        _device_path: &str,
-        _fs_staging_path: &str,
-        _volume_uuid: &Uuid,
+        _device_path: String,
+        _fs_staging_path: String,
+        _volume_uuid: Uuid,
     ) -> Result<(), Error> {
         Ok(())
     }
 
     async fn repair(
         &self,
-        device: &str,
-        _staging_path: &str,
-        _options: &[String],
-        _volume_uuid: &Uuid,
+        device: String,
+        _staging_path: String,
+        _options: Vec<String>,
+        _volume_uuid: Uuid,
     ) -> Result<(), Error> {
         let binary = "e2fsck".to_string();
         let output = Command::new(&binary)
@@ -189,8 +193,8 @@ impl FileSystemOps for Ext4Fs {
         Ok(())
     }
 
-    async fn set_uuid(&self, device: &str, volume_uuid: &Uuid) -> Result<(), Error> {
-        if let Ok(probed_uuid) = FileSystem::property(device, "UUID") {
+    async fn set_uuid(&self, device: String, volume_uuid: Uuid) -> Result<(), Error> {
+        if let Ok(probed_uuid) = FileSystem::property(device.clone(), "UUID".to_string()) {
             if probed_uuid == volume_uuid.to_string() {
                 return Ok(());
             }
@@ -200,7 +204,7 @@ impl FileSystemOps for Ext4Fs {
         let output = Command::new(&binary)
             .arg("-U")
             .arg(volume_uuid.to_string())
-            .arg(device)
+            .arg(device.clone())
             .output()
             .await
             .map_err(|error| format!("failed to execute {binary}: {error}"))?;
@@ -213,7 +217,7 @@ impl FileSystemOps for Ext4Fs {
             ));
         }
 
-        let probe_uuid = FileSystem::property(device, "UUID")
+        let probe_uuid = FileSystem::property(device.clone(), "UUID".to_string())
             .map_err(|error| format!("Failed to get UUID of device {device}: {error}"))?;
 
         if volume_uuid.to_string() != probe_uuid {
@@ -230,6 +234,7 @@ impl FileSystemOps for Ext4Fs {
         let dev_path = match dev_path {
             Some(path) => path,
             None => get_devicepath(mount_path)
+                .await
                 .map_err(|error| {
                     format!("failed to get dev path for mountpoint {mount_path}: {error}")
                 })?
@@ -244,7 +249,7 @@ impl FileSystemOps for Ext4Fs {
 
 #[async_trait]
 impl FileSystemOps for XFs {
-    async fn create(&self, device: &str) -> Result<(), Error> {
+    async fn create(&self, device: String) -> Result<(), Error> {
         let binary = "mkfs.xfs";
         let args = match std::env::var("MKFS_XFS_ARGS") {
             Ok(args) => args
@@ -270,38 +275,38 @@ impl FileSystemOps for XFs {
         mount_flags
     }
 
-    fn unmount_on_fs_id_diff(
+    async fn unmount_on_fs_id_diff(
         &self,
-        device_path: &str,
-        fs_staging_path: &str,
-        volume_uuid: &Uuid,
+        device_path: String,
+        fs_staging_path: String,
+        volume_uuid: Uuid,
     ) -> Result<(), Error> {
-        mount::unmount_on_fs_id_diff(device_path, fs_staging_path, volume_uuid)
+        mount::unmount_on_fs_id_diff(device_path, fs_staging_path, volume_uuid).await
     }
 
     /// Xfs filesystem needs an unmount to clear the log, so that the parameters can be changed.
     /// Mount the filesystem to a defined path and then unmount it.
     async fn repair(
         &self,
-        device: &str,
-        staging_path: &str,
-        options: &[String],
-        volume_uuid: &Uuid,
+        device: String,
+        staging_path: String,
+        options: Vec<String>,
+        volume_uuid: Uuid,
     ) -> Result<(), Error> {
-        mount::filesystem_mount(device, staging_path, &FileSystem(Fs::Xfs), options).map_err(|error| {
+        mount::filesystem_mount(device.clone(), staging_path.clone(), FileSystem(Fs::Xfs), options).await.map_err(|error| {
             format!(
                 "(xfs repairing) Failed to mount device {device} onto {staging_path} for {volume_uuid} : {error}",
             )
         })?;
-        mount::filesystem_unmount(staging_path).map_err(|error| {
+        mount::filesystem_unmount(staging_path.clone()).await.map_err(|error| {
             format!(
                 "(xfs repairing) Failed to unmount device {device} from {staging_path} for {volume_uuid} : {error}",
             )
         })
     }
 
-    async fn set_uuid(&self, device: &str, volume_uuid: &Uuid) -> Result<(), Error> {
-        if let Ok(probed_uuid) = FileSystem::property(device, "UUID") {
+    async fn set_uuid(&self, device: String, volume_uuid: Uuid) -> Result<(), Error> {
+        if let Ok(probed_uuid) = FileSystem::property(device.clone(), "UUID".to_string()) {
             if probed_uuid == volume_uuid.to_string() {
                 return Ok(());
             }
@@ -311,7 +316,7 @@ impl FileSystemOps for XFs {
         let output = Command::new(&binary)
             .arg("-U")
             .arg(volume_uuid.to_string())
-            .arg(device)
+            .arg(device.clone())
             .output()
             .await
             .map_err(|error| format!("failed to execute {binary}: {error}"))?;
@@ -324,7 +329,7 @@ impl FileSystemOps for XFs {
             ));
         }
 
-        let probe_uuid = FileSystem::property(device, "UUID")
+        let probe_uuid = FileSystem::property(device.clone(), "UUID".to_string())
             .map_err(|error| format!("Failed to get UUID of device {device}: {error}"))?;
 
         if volume_uuid.to_string() != probe_uuid {
@@ -344,7 +349,7 @@ impl FileSystemOps for XFs {
 
 #[async_trait]
 impl FileSystemOps for BtrFs {
-    async fn create(&self, device: &str) -> Result<(), Error> {
+    async fn create(&self, device: String) -> Result<(), Error> {
         let binary = "mkfs.btrfs";
         let output = Command::new(binary)
             .arg(device)
@@ -358,23 +363,23 @@ impl FileSystemOps for BtrFs {
         mount_flags
     }
 
-    fn unmount_on_fs_id_diff(
+    async fn unmount_on_fs_id_diff(
         &self,
-        device_path: &str,
-        fs_staging_path: &str,
-        volume_uuid: &Uuid,
+        device_path: String,
+        fs_staging_path: String,
+        volume_uuid: Uuid,
     ) -> Result<(), Error> {
-        mount::unmount_on_fs_id_diff(device_path, fs_staging_path, volume_uuid)
+        mount::unmount_on_fs_id_diff(device_path, fs_staging_path, volume_uuid).await
     }
 
     /// `btrfs check --readonly` is a not a `DANGEROUS OPTION` as it only exists to calm potential
     /// panic when users are going to run the checker and doesn't try to attempt to fix problems.
     async fn repair(
         &self,
-        device: &str,
-        _staging_path: &str,
-        _options: &[String],
-        _volume_uuid: &Uuid,
+        device: String,
+        _staging_path: String,
+        _options: Vec<String>,
+        _volume_uuid: Uuid,
     ) -> Result<(), Error> {
         let binary = "btrfs".to_string();
         let output = Command::new(&binary)
@@ -402,8 +407,8 @@ impl FileSystemOps for BtrFs {
         Ok(())
     }
 
-    async fn set_uuid(&self, device: &str, volume_uuid: &Uuid) -> Result<(), Error> {
-        if let Ok(probed_uuid) = FileSystem::property(device, "UUID") {
+    async fn set_uuid(&self, device: String, volume_uuid: Uuid) -> Result<(), Error> {
+        if let Ok(probed_uuid) = FileSystem::property(device.to_string(), "UUID".to_string()) {
             if probed_uuid == volume_uuid.to_string() {
                 return Ok(());
             }
@@ -413,7 +418,7 @@ impl FileSystemOps for BtrFs {
         let output = Command::new(&binary)
             .arg("-M")
             .arg(volume_uuid.to_string())
-            .arg(device)
+            .arg(device.clone())
             .output()
             .await
             .map_err(|error| format!("failed to execute {binary}: {error}"))?;
@@ -426,7 +431,7 @@ impl FileSystemOps for BtrFs {
             ));
         }
 
-        let probe_uuid = FileSystem::property(device, "UUID")
+        let probe_uuid = FileSystem::property(device.clone(), "UUID".to_string())
             .map_err(|error| format!("Failed to get UUID of device {device}: {error}"))?;
 
         if volume_uuid.to_string() != probe_uuid {

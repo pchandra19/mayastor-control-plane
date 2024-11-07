@@ -13,8 +13,8 @@ mod tests {
     use csi_driver::node::internal::{
         node_plugin_client::NodePluginClient,
         node_plugin_server::{NodePlugin, NodePluginServer},
-        FindVolumeReply, FindVolumeRequest, FreezeFsReply, FreezeFsRequest, UnfreezeFsReply,
-        UnfreezeFsRequest, VolumeType,
+        CleanupReply, CleanupRequest, FindVolumeReply, FindVolumeRequest, FreezeFsReply,
+        FreezeFsRequest, UnfreezeFsReply, UnfreezeFsRequest, VolumeType,
     };
     use std::{
         str::FromStr,
@@ -72,6 +72,13 @@ mod tests {
                 volume_type: Some(VolumeType::Rawblock as i32),
                 device_path: "".to_string(),
             }))
+        }
+
+        async fn cleanup(
+            &self,
+            request: Request<CleanupRequest>,
+        ) -> Result<Response<CleanupReply>, Status> {
+            unimplemented!()
         }
     }
 

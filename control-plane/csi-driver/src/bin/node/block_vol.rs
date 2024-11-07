@@ -55,7 +55,7 @@ pub(crate) async fn publish_block_volume(msg: &NodePublishVolumeRequest) -> Resu
             //target exists and is a special file
 
             // Idempotency, if we have done this already just return success.
-            match findmnt::get_devicepath(target_path) {
+            match findmnt::get_devicepath(target_path).await {
                 Ok(findmnt_dev) => {
                     if let Some(fm_devpath) = findmnt_dev {
                         if fm_devpath == device_path {
@@ -84,11 +84,11 @@ pub(crate) async fn publish_block_volume(msg: &NodePublishVolumeRequest) -> Resu
         }
 
         if !path_target.exists() {
-            std::fs::File::create(target_path)?;
+            std::fs::File::create(target_path.clone())?;
         }
 
         if let Err(error) =
-            mount::blockdevice_mount(&device_path, target_path.as_str(), msg.readonly)
+            mount::blockdevice_mount(device_path, target_path.clone(), msg.readonly).await
         {
             return Err(failure!(
                 Code::Internal,
@@ -108,14 +108,17 @@ pub(crate) async fn publish_block_volume(msg: &NodePublishVolumeRequest) -> Resu
     }
 }
 
-pub(crate) fn unpublish_block_volume(msg: &NodeUnpublishVolumeRequest) -> Result<(), Status> {
-    let target_path = &msg.target_path;
-    let volume_id = &msg.volume_id;
+pub(crate) async fn unpublish_block_volume(msg: &NodeUnpublishVolumeRequest) -> Result<(), Status> {
+    let target_path = msg.target_path.clone();
+    let volume_id = msg.volume_id.clone();
 
     // block volumes are mounted on block special file, which is not
     // a regular file.
-    if mount::find_mount(None, Some(target_path)).is_some() {
-        match mount::blockdevice_unmount(target_path) {
+    if mount::find_mount(None, Some(target_path.clone()))
+        .await
+        .is_some()
+    {
+        match mount::blockdevice_unmount(target_path.clone()).await {
             Ok(_) => {}
             Err(err) => {
                 return Err(Status::new(
@@ -128,7 +131,7 @@ pub(crate) fn unpublish_block_volume(msg: &NodeUnpublishVolumeRequest) -> Result
 
     debug!("Removing block special file {}", target_path);
 
-    if let Err(error) = std::fs::remove_file(target_path) {
+    if let Err(error) = std::fs::remove_file(target_path.clone()) {
         warn!("Failed to remove block file {}: {}", target_path, error);
     }
 

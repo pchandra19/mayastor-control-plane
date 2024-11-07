@@ -25,7 +25,7 @@ macro_rules! failure {
 
 pub(crate) async fn stage_fs_volume(
     msg: &NodeStageVolumeRequest,
-    device_path: &str,
+    device_path: String,
     mnt: &MountVolume,
     filesystems: &[FileSystem],
 ) -> Result<(), Status> {
@@ -40,9 +40,9 @@ pub(crate) async fn stage_fs_volume(
 
     // Extract the fs_id from the context, will only be set if requested and its a clone/restore.
     let params = PublishParams::try_from(&msg.publish_context)?;
-    let fs_id = params.fs_id();
+    let fs_id = params.fs_id().clone();
 
-    let fs_staging_path = &msg.staging_target_path;
+    let fs_staging_path = msg.staging_target_path.clone();
 
     // One final check for fs volumes, ignore for block volumes.
     if let Err(err) = fs::create_dir_all(PathBuf::from(&fs_staging_path)) {
@@ -76,9 +76,12 @@ pub(crate) async fn stage_fs_volume(
                 ));
             }
         }
-    };
+    }
+    .clone();
 
-    if let Some(existing) = mount::find_mount(Some(device_path), Some(fs_staging_path)) {
+    if let Some(existing) =
+        mount::find_mount(Some(device_path.clone()), Some(fs_staging_path.clone())).await
+    {
         debug!(
             "Device {} is already mounted onto {}",
             device_path, fs_staging_path
@@ -91,7 +94,7 @@ pub(crate) async fn stage_fs_volume(
         // If clone's fs id change was requested and we were not able to change it in first attempt
         // unmount and continue the stage again.
         let continue_stage = if fs_id.is_some() {
-            continue_after_unmount_on_fs_id_diff(fstype ,device_path, fs_staging_path, &volume_uuid)
+            continue_after_unmount_on_fs_id_diff(fstype.clone() ,device_path.clone(), fs_staging_path.clone(), volume_uuid).await
                 .map_err(|error| {
                     failure!(
                     Code::FailedPrecondition,
@@ -107,7 +110,7 @@ pub(crate) async fn stage_fs_volume(
         if !continue_stage {
             // todo: validate other flags?
             if mnt.mount_flags.readonly() != existing.options.readonly() {
-                mount::remount(fs_staging_path, mnt.mount_flags.readonly())?;
+                mount::remount(fs_staging_path, mnt.mount_flags.readonly()).await?;
             }
 
             return Ok(());
@@ -115,7 +118,10 @@ pub(crate) async fn stage_fs_volume(
     }
 
     // abort if device is mounted somewhere else
-    if mount::find_mount(Some(device_path), None).is_some() {
+    if mount::find_mount(Some(device_path.clone()), None)
+        .await
+        .is_some()
+    {
         return Err(failure!(
             Code::AlreadyExists,
             "Failed to stage volume {}: device {} is already mounted elsewhere",
@@ -125,7 +131,10 @@ pub(crate) async fn stage_fs_volume(
     }
 
     // abort if some another device is mounted on staging_path
-    if mount::find_mount(None, Some(fs_staging_path)).is_some() {
+    if mount::find_mount(None, Some(fs_staging_path.clone()))
+        .await
+        .is_some()
+    {
         return Err(failure!(
             Code::AlreadyExists,
             "Failed to stage volume {}: another device is already mounted onto {}",
@@ -147,8 +156,14 @@ pub(crate) async fn stage_fs_volume(
         })?
         .mount_flags(mnt.mount_flags.clone());
 
-    if let Err(error) =
-        prepare_device(fstype, device_path, fs_staging_path, &mount_flags, fs_id).await
+    if let Err(error) = prepare_device(
+        fstype.clone(),
+        device_path.clone(),
+        fs_staging_path.clone(),
+        mount_flags.clone(),
+        fs_id,
+    )
+    .await
     {
         return Err(failure!(
             Code::Internal,
@@ -161,7 +176,13 @@ pub(crate) async fn stage_fs_volume(
 
     debug!("Mounting device {} onto {}", device_path, fs_staging_path);
 
-    if let Err(error) = mount::filesystem_mount(device_path, fs_staging_path, fstype, &mount_flags)
+    if let Err(error) = mount::filesystem_mount(
+        device_path.clone(),
+        fs_staging_path.clone(),
+        fstype,
+        mount_flags,
+    )
+    .await
     {
         return Err(failure!(
             Code::Internal,
@@ -180,17 +201,17 @@ pub(crate) async fn stage_fs_volume(
 
 /// Unstage a filesystem volume
 pub(crate) async fn unstage_fs_volume(msg: &NodeUnstageVolumeRequest) -> Result<(), Status> {
-    let volume_id = &msg.volume_id;
-    let fs_staging_path = &msg.staging_target_path;
+    let volume_id = msg.volume_id.clone();
+    let fs_staging_path = msg.staging_target_path.clone();
 
-    if let Some(mount) = mount::find_mount(None, Some(fs_staging_path)) {
+    if let Some(mount) = mount::find_mount(None, Some(fs_staging_path.clone())).await {
         debug!(
             "Unstaging filesystem volume {}, unmounting device {:?} from {}",
             volume_id, mount.source, fs_staging_path
         );
         let device = mount.source.to_string_lossy().to_string();
-        let mounts = mount::find_src_mounts(&device, Some(fs_staging_path));
-        if let Some(unkown_mount) = mounts.first().cloned() {
+        let mounts = mount::find_src_mounts(device.clone(), Some(fs_staging_path.clone())).await;
+        if let Some(unknown_mount) = mounts.first().cloned() {
             for mount in mounts {
                 tracing::error!(
                     volume.uuid = %volume_id,
@@ -204,12 +225,12 @@ pub(crate) async fn unstage_fs_volume(msg: &NodeUnstageVolumeRequest) -> Result<
                 Code::Internal,
                 "Failed to unstage volume {}: existing unknown bind mount {:?} for device {:?}",
                 volume_id,
-                unkown_mount.dest,
-                unkown_mount.source
+                unknown_mount.dest,
+                unknown_mount.source
             ));
         }
 
-        if let Err(error) = mount::filesystem_unmount(fs_staging_path) {
+        if let Err(error) = mount::filesystem_unmount(fs_staging_path.clone()).await {
             return Err(failure!(
                 Code::Internal,
                 "Failed to unstage volume {}: failed to unmount device {:?} from {}: {}",
@@ -227,28 +248,30 @@ pub(crate) async fn unstage_fs_volume(msg: &NodeUnstageVolumeRequest) -> Result<
 }
 
 /// Publish a filesystem volume
-pub(crate) fn publish_fs_volume(
+pub(crate) async fn publish_fs_volume(
     msg: &NodePublishVolumeRequest,
     mnt: &MountVolume,
     filesystems: &[FileSystem],
 ) -> Result<(), Status> {
-    let target_path = &msg.target_path;
-    let volume_id = &msg.volume_id;
-    let fs_staging_path = &msg.staging_target_path;
+    let target_path = msg.target_path.clone();
+    let volume_id = msg.volume_id.clone();
+    let fs_staging_path = msg.staging_target_path.clone();
 
     debug!(
         "Publishing volume {} from {} to {}",
         volume_id, fs_staging_path, target_path
     );
 
-    let staged = mount::find_mount(None, Some(fs_staging_path)).ok_or_else(|| {
-        failure!(
-            Code::InvalidArgument,
-            "Failed to publish volume {}: no mount for staging path {}",
-            volume_id,
-            fs_staging_path
-        )
-    })?;
+    let staged = mount::find_mount(None, Some(fs_staging_path.clone()))
+        .await
+        .ok_or_else(|| {
+            failure!(
+                Code::InvalidArgument,
+                "Failed to publish volume {}: no mount for staging path {}",
+                volume_id,
+                fs_staging_path
+            )
+        })?;
 
     // TODO: Should also check that the staged "device"
     // corresponds to the the volume uuid
@@ -285,7 +308,7 @@ pub(crate) fn publish_fs_volume(
         ));
     }
 
-    if let Some(mount) = mount::find_mount(None, Some(target_path)) {
+    if let Some(mount) = mount::find_mount(None, Some(target_path.clone())).await {
         if mount.source != staged.source {
             return Err(failure!(
                 Code::AlreadyExists,
@@ -314,7 +337,7 @@ pub(crate) fn publish_fs_volume(
 
     debug!("Creating directory {}", target_path);
 
-    if let Err(error) = fs::create_dir_all(PathBuf::from(target_path)) {
+    if let Err(error) = fs::create_dir_all(PathBuf::from(target_path.clone())) {
         if error.kind() != ErrorKind::AlreadyExists {
             return Err(failure!(
                 Code::Internal,
@@ -328,7 +351,8 @@ pub(crate) fn publish_fs_volume(
 
     debug!("Mounting {} to {}", fs_staging_path, target_path);
 
-    if let Err(error) = mount::bind_mount(fs_staging_path, target_path, false) {
+    if let Err(error) = mount::bind_mount(fs_staging_path.clone(), target_path.clone(), false).await
+    {
         return Err(failure!(
             Code::Internal,
             "Failed to publish volume {}: failed to mount {} to {}: {}",
@@ -345,7 +369,7 @@ pub(crate) fn publish_fs_volume(
 
         debug!("Remounting {} as readonly", target_path);
 
-        if let Err(error) = mount::bind_remount(target_path, &options) {
+        if let Err(error) = mount::bind_remount(target_path.clone(), options).await {
             let message = format!(
                 "Failed to publish volume {volume_id}: failed to mount {fs_staging_path} to {target_path} as readonly: {error}"
             );
@@ -354,7 +378,7 @@ pub(crate) fn publish_fs_volume(
 
             debug!("Unmounting {}", target_path);
 
-            if let Err(error) = mount::bind_unmount(target_path) {
+            if let Err(error) = mount::bind_unmount(target_path.clone()).await {
                 error!("Failed to unmount {}: {}", target_path, error);
             }
 
@@ -367,16 +391,19 @@ pub(crate) fn publish_fs_volume(
     Ok(())
 }
 
-pub(crate) fn unpublish_fs_volume(msg: &NodeUnpublishVolumeRequest) -> Result<(), Status> {
+pub(crate) async fn unpublish_fs_volume(msg: &NodeUnpublishVolumeRequest) -> Result<(), Status> {
     // filesystem mount
-    let target_path = &msg.target_path;
-    let volume_id = &msg.volume_id;
+    let target_path = msg.target_path.clone();
+    let volume_id = msg.volume_id.clone();
 
-    if mount::find_mount(None, Some(target_path)).is_none() {
+    if mount::find_mount(None, Some(target_path.clone()))
+        .await
+        .is_none()
+    {
         // No mount found for target_path.
         // The idempotency requirement means this is not an error.
         // Just clean up as best we can
-        if let Err(error) = fs::remove_dir(PathBuf::from(target_path)) {
+        if let Err(error) = fs::remove_dir(PathBuf::from(target_path.clone())) {
             if error.kind() != ErrorKind::NotFound {
                 // Return error so that kubelet can retry
                 return Err(failure!(
@@ -398,7 +425,7 @@ pub(crate) fn unpublish_fs_volume(msg: &NodeUnpublishVolumeRequest) -> Result<()
 
     debug!("Unmounting {}", target_path);
 
-    if let Err(error) = mount::bind_unmount(target_path) {
+    if let Err(error) = mount::bind_unmount(target_path.clone()).await {
         return Err(failure!(
             Code::Internal,
             "Failed to unpublish volume {}: failed to unmount {}: {}",
@@ -410,7 +437,7 @@ pub(crate) fn unpublish_fs_volume(msg: &NodeUnpublishVolumeRequest) -> Result<()
 
     debug!("Removing directory {}", target_path);
 
-    if let Err(error) = fs::remove_dir(PathBuf::from(target_path)) {
+    if let Err(error) = fs::remove_dir(PathBuf::from(target_path.clone())) {
         if error.kind() != ErrorKind::NotFound {
             return Err(failure!(
                 Code::Internal,
@@ -427,14 +454,15 @@ pub(crate) fn unpublish_fs_volume(msg: &NodeUnpublishVolumeRequest) -> Result<()
 
 /// Check if we can continue the staging incase the change fs id failed mid way and we want to retry
 /// the flow.
-fn continue_after_unmount_on_fs_id_diff(
-    fstype: &FileSystem,
-    device_path: &str,
-    fs_staging_path: &str,
-    volume_uuid: &Uuid,
+async fn continue_after_unmount_on_fs_id_diff(
+    fstype: FileSystem,
+    device_path: String,
+    fs_staging_path: String,
+    volume_uuid: Uuid,
 ) -> Result<bool, String> {
     fstype
         .fs_ops()?
-        .unmount_on_fs_id_diff(device_path, fs_staging_path, volume_uuid)?;
-    Ok(fstype == &Fs::Xfs.into())
+        .unmount_on_fs_id_diff(device_path, fs_staging_path, volume_uuid)
+        .await?;
+    Ok(fstype == Fs::Xfs.into())
 }

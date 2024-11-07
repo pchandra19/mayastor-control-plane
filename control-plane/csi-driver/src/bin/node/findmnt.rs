@@ -2,7 +2,8 @@ use crate::{error::DeviceError, filesystem_ops::FileSystem};
 use csi_driver::filesystem::FileSystem as Fs;
 
 use serde_json::Value;
-use std::{collections::HashMap, process::Command, str::FromStr, string::String, vec::Vec};
+use std::{collections::HashMap, str::FromStr, string::String, vec::Vec};
+use tokio::process::Command;
 use tracing::{error, warn};
 
 // Keys of interest we expect to find in the JSON output generated
@@ -26,6 +27,11 @@ impl DeviceMount {
     /// File system type
     pub(crate) fn fstype(&self) -> FileSystem {
         self.fstype.clone()
+    }
+    /// Mount Path
+    #[allow(dead_code)]
+    pub(crate) fn mount_path(&self) -> String {
+        self.mount_path.clone()
     }
 }
 
@@ -131,8 +137,8 @@ const FIND_MNT_ARGS: [&str; 3] = ["-J", "-o", "SOURCE,TARGET,FSTYPE"];
 
 /// Execute the Linux utility findmnt, collect the json output,
 /// invoke the filter function and return the filtered results.
-fn findmnt(params: Filter) -> Result<Vec<HashMap<String, String>>, DeviceError> {
-    let output = Command::new(FIND_MNT).args(FIND_MNT_ARGS).output()?;
+async fn findmnt(params: Filter<'_>) -> Result<Vec<HashMap<String, String>>, DeviceError> {
+    let output = Command::new(FIND_MNT).args(FIND_MNT_ARGS).output().await?;
     if output.status.success() {
         let json_str = String::from_utf8(output.stdout)?;
         let json: Value = serde_json::from_str(&json_str)?;
@@ -147,12 +153,12 @@ fn findmnt(params: Filter) -> Result<Vec<HashMap<String, String>>, DeviceError> 
 /// Use the Linux utility findmnt to find the name of the device mounted at a
 /// directory or block special file, if any.
 /// mount_path is the path a device is mounted on.
-pub(crate) fn get_devicepath(mount_path: &str) -> Result<Option<String>, DeviceError> {
+pub(crate) async fn get_devicepath(mount_path: &str) -> Result<Option<String>, DeviceError> {
     let tgt_filter = Filter {
         key: TARGET_KEY,
         value: mount_path,
     };
-    let sources = findmnt(tgt_filter)?;
+    let sources = findmnt(tgt_filter).await?;
     {
         match sources.len() {
             0 => Ok(None),
@@ -180,12 +186,12 @@ pub(crate) fn get_devicepath(mount_path: &str) -> Result<Option<String>, DeviceE
 /// Use the Linux utility findmnt to find the mount paths for a block device,
 /// if any.
 /// device_path is the path to the device for example "/dev/sda1"
-pub(crate) fn get_mountpaths(device_path: &str) -> Result<Vec<DeviceMount>, DeviceError> {
+pub(crate) async fn get_mountpaths(device_path: &str) -> Result<Vec<DeviceMount>, DeviceError> {
     let dev_filter = Filter {
         key: SOURCE_KEY,
         value: device_path,
     };
-    match findmnt(dev_filter) {
+    match findmnt(dev_filter).await {
         Ok(results) => {
             let mut mountpaths: Vec<DeviceMount> = Vec::new();
             for entry in results {

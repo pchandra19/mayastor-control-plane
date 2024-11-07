@@ -141,7 +141,7 @@ fn get_access_type(volume_capability: &Option<VolumeCapability>) -> Result<&Acce
 
 /// Detach the nexus device from the system, either at volume unstage,
 /// or after failed filesystem mount at volume stage.
-async fn detach(uuid: &Uuid, errheader: String) -> Result<(), Status> {
+pub(crate) async fn detach(uuid: &Uuid, errheader: String) -> Result<(), Status> {
     if let Some(device) = Device::lookup(uuid).await.map_err(|error| {
         failure!(
             Code::Internal,
@@ -153,7 +153,7 @@ async fn detach(uuid: &Uuid, errheader: String) -> Result<(), Status> {
         let device_path = device.devname();
         debug!("Detaching device {}", device_path);
 
-        let mounts = crate::mount::find_src_mounts(&device_path, None);
+        let mounts = crate::mount::find_src_mounts(device_path.clone(), None).await;
         if !mounts.is_empty() {
             return Err(failure!(
                 Code::FailedPrecondition,
@@ -305,7 +305,7 @@ impl node_server::Node for Node {
             )
         })? {
             AccessType::Mount(mnt) => {
-                publish_fs_volume(&msg, mnt, &self.filesystems)?;
+                publish_fs_volume(&msg, mnt, &self.filesystems).await?;
             }
             AccessType::Block(_) => {
                 publish_block_volume(&msg).await?;
@@ -356,7 +356,7 @@ impl node_server::Node for Node {
         let target_path = Path::new(&msg.target_path);
         if target_path.exists() {
             if target_path.is_dir() {
-                unpublish_fs_volume(&msg)?;
+                unpublish_fs_volume(&msg).await?;
             } else {
                 if target_path.is_file() {
                     return Err(Status::new(
@@ -368,7 +368,7 @@ impl node_server::Node for Node {
                     ));
                 }
 
-                unpublish_block_volume(&msg)?;
+                unpublish_block_volume(&msg).await?;
             }
         }
         Ok(Response::new(NodeUnpublishVolumeResponse {}))
@@ -585,18 +585,20 @@ impl node_server::Node for Node {
             // volume_capability hasn't come through for us, we're on our own.
             // Try to find the mount path at volume_path. As an extension, also validates that
             // volume_path is in fact a filesystem.
-            CsiAccessType::Unknown(_) => match find_mount(None, Some(args.volume_path.as_str())) {
-                // Not a filesystem.
-                None => return success_result,
-                // Try to generate a supported filesystem type.
-                Some(mount_info) => FileSystem::try_from(&mount_info).map_err(|error| {
-                    failure!(
-                        Code::InvalidArgument,
-                        "failed to find a supported filesystem type: {}",
-                        error
-                    )
-                })?,
-            },
+            CsiAccessType::Unknown(_) => {
+                match find_mount(None, Some(args.volume_path.clone())).await {
+                    // Not a filesystem.
+                    None => return success_result,
+                    // Try to generate a supported filesystem type.
+                    Some(mount_info) => FileSystem::try_from(&mount_info).map_err(|error| {
+                        failure!(
+                            Code::InvalidArgument,
+                            "failed to find a supported filesystem type: {}",
+                            error
+                        )
+                    })?,
+                }
+            }
         };
 
         // Expand the filesystem.
@@ -759,9 +761,9 @@ impl node_server::Node for Node {
         match access_type {
             AccessType::Mount(mnt) => {
                 if let Err(fsmount_error) =
-                    stage_fs_volume(&msg, &device_path, mnt, &self.filesystems).await
+                    stage_fs_volume(&msg, device_path.clone(), mnt, &self.filesystems).await
                 {
-                    let mounts = crate::mount::find_src_mounts(&device_path, None);
+                    let mounts = crate::mount::find_src_mounts(device_path, None).await;
                     // If the device is mounted elsewhere, don't detach it!
                     if mounts.is_empty() {
                         detach(
