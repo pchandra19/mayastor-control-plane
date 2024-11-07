@@ -6,14 +6,14 @@ use uuid::Uuid;
 
 /// Prepare the filesystem before mount, change parameters if requested.
 pub(crate) async fn prepare_device(
-    fstype: &FileSystem,
-    device: &str,
-    staging_path: &str,
-    options: &[String],
-    fs_id: &Option<Uuid>,
+    fstype: FileSystem,
+    device: String,
+    staging_path: String,
+    options: Vec<String>,
+    fs_id: Option<Uuid>,
 ) -> Result<(), String> {
     debug!("Probing device {}", device);
-    let fs = FileSystem::property(device, "TYPE");
+    let fs = FileSystem::property(device.clone(), "TYPE".to_string());
 
     let fs_ops = fstype.fs_ops()?;
 
@@ -22,7 +22,7 @@ pub(crate) async fn prepare_device(
         if let Some(fs_id) = fs_id {
             debug!("Attempting to set uuid for filesystem {fs_id}, device: {device}");
             fs_ops
-                .set_uuid_with_repair(device, staging_path, options, fs_id)
+                .set_uuid_with_repair(device.clone(), staging_path, options, fs_id)
                 .await?;
         }
         return Ok(());

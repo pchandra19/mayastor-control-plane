@@ -20,6 +20,8 @@ service NodePlugin {
   rpc UnfreezeFS (UnfreezeFSRequest) returns (UnfreezeFSReply) {}
   // Find the volume identified by the volume ID, and return volume information.
   rpc FindVolume (FindVolumeRequest) returns (FindVolumeReply) {}
+  // Issue Cleanup for the volume, unmount and disconnect.
+  rpc Cleanup (CleanupRequest) returns (CleanupReply) {}
 }
 
 enum VolumeType {
@@ -47,6 +49,15 @@ message UnfreezeFSReply {
 // Message for request on a volume
 message FindVolumeRequest {
   string volume_id = 1;
+}
+
+// The request message containing ID of the volume path to be cleaned up
+message CleanupRequest {
+  string volume_id = 1;
+}
+
+// Message for response on a volume cleanup
+message CleanupReply {
 }
 
 // Message for response to a request for a volume

@@ -41,7 +41,7 @@ pub(crate) async fn fsfreeze(volume_id: &str, command: FsFreezeOpt) -> Result<()
     };
 
     let device_path = device.devname();
-    if let Some(mnt) = mount::find_mount(Some(&device_path), None) {
+    if let Some(mnt) = mount::find_mount(Some(device_path.clone()), None).await {
         // Make a preflight check, to ensure subsystem has at least one live path.
         let device_nqn = device.devnqn();
         fsfreeze_preflight_check(volume_id, device_nqn).map_err(|errno| {
@@ -67,12 +67,12 @@ pub(crate) async fn fsfreeze(volume_id: &str, command: FsFreezeOpt) -> Result<()
         // Use findmnt to work out if volume is mounted as a raw
         // block, i.e. we get some matches, and return the
         // BlockDeviceMount error.
-        let mountpaths = findmnt::get_mountpaths(&device_path).map_err(|error| {
-            FsfreezeError::InternalFailure {
+        let mountpaths = findmnt::get_mountpaths(&device_path)
+            .await
+            .map_err(|error| FsfreezeError::InternalFailure {
                 source: error,
                 volume_id: volume_id.to_string(),
-            }
-        })?;
+            })?;
         if !mountpaths.is_empty() {
             return Err(FsfreezeError::BlockDeviceMount {
                 volume_id: volume_id.to_string(),

@@ -4,19 +4,26 @@
 //! the CSI framework. This service must be deployed on all nodes the
 //! IoEngine CSI node plugin is deployed.
 use crate::{
+    block_vol::unpublish_block_volume,
+    dev::Device,
+    filesystem_vol::{unpublish_fs_volume, unstage_fs_volume},
+    findmnt,
     fsfreeze::{fsfreeze, FsFreezeOpt},
+    node::detach,
     nodeplugin_svc,
     nodeplugin_svc::{find_mount, lookup_device},
     shutdown_event::Shutdown,
 };
 use csi_driver::node::internal::{
     node_plugin_server::{NodePlugin, NodePluginServer},
-    FindVolumeReply, FindVolumeRequest, FreezeFsReply, FreezeFsRequest, UnfreezeFsReply,
-    UnfreezeFsRequest, VolumeType,
+    CleanupReply, CleanupRequest, FindVolumeReply, FindVolumeRequest, FreezeFsReply,
+    FreezeFsRequest, UnfreezeFsReply, UnfreezeFsRequest, VolumeType,
 };
 use nodeplugin_svc::TypeOfMount;
+use rpc::csi::{NodeUnpublishVolumeRequest, NodeUnstageVolumeRequest};
 use tonic::{transport::Server, Request, Response, Status};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
+use uuid::Uuid;
 
 #[derive(Debug, Default)]
 pub(crate) struct NodePluginSvc {}
@@ -53,6 +60,103 @@ impl NodePlugin for NodePluginSvc {
             volume_type: mount.map(Into::<VolumeType>::into).map(Into::into),
             device_path: device.devname(),
         }))
+    }
+
+    async fn cleanup(
+        &self,
+        request: Request<CleanupRequest>,
+    ) -> Result<Response<CleanupReply>, Status> {
+        trace!("Entering server side cleanup flow..");
+        let volume_id = request.into_inner().volume_id;
+        let uuid = Uuid::parse_str(&volume_id).map_err(|error| {
+            Status::invalid_argument(format!("Invalid volume uuid: {volume_id}, {error}"))
+        })?;
+        trace!("UUID Parsing done.");
+        // Lookup Device
+        let device = Device::lookup(&uuid)
+            .await
+            .map_err(|error| {
+                Status::internal(format!("volume_id: {}, error: {}", volume_id, error))
+            })?
+            .ok_or(Status::not_found(format!(
+                "volume_id: {}, not found",
+                volume_id
+            )))?;
+        trace!("Volume Lookup Done");
+        // Get mountpaths for the device
+        let mountpaths = findmnt::get_mountpaths(&device.devname()).await?;
+        if !mountpaths.is_empty() {
+            let fstype = mountpaths[0].fstype();
+            for devmount in &mountpaths {
+                if fstype != devmount.fstype() {
+                    return Err(Status::aborted(format!(
+                        "Inconsistent mount filesystems: volume ID: {}",
+                        volume_id
+                    )))?;
+                }
+            }
+            trace!("Consistent filesystem check done");
+            // For Raw block
+            if fstype == csi_driver::filesystem::FileSystem::DevTmpFs.into() {
+                let devmount = mountpaths.iter().find(|a| {
+                    a.mount_path()
+                        .contains("kubernetes.io/csi/volumeDevices/publish")
+                });
+                if let Some(devmount) = devmount {
+                    debug!(
+                        " Raw Block volume, volume id {}, issuing unpublish {}",
+                        volume_id,
+                        devmount.mount_path()
+                    );
+                    unpublish_block_volume(&NodeUnpublishVolumeRequest {
+                        volume_id: volume_id.to_string(),
+                        target_path: devmount.mount_path().to_string(),
+                    })
+                    .await?;
+                    trace!("Raw block unpublish done");
+                }
+            }
+            // For filesystem
+            else {
+                let devmount = mountpaths
+                    .iter()
+                    .find(|a| a.mount_path().ends_with("/mount"));
+                if let Some(devmount) = devmount {
+                    debug!(
+                        "Filesystem volume, volume id {}, issuing unpublish {}",
+                        volume_id,
+                        devmount.mount_path()
+                    );
+                    unpublish_fs_volume(&NodeUnpublishVolumeRequest {
+                        volume_id: volume_id.to_string(),
+                        target_path: devmount.mount_path().to_string(),
+                    })
+                    .await?;
+                    trace!("Filesystem unpublish done");
+                }
+
+                let devmount = mountpaths
+                    .iter()
+                    .find(|a| a.mount_path().ends_with("/globalmount"));
+                if let Some(devmount) = devmount {
+                    debug!(
+                        "Filesystem volume, volume id {}, issuing unstage {}",
+                        volume_id,
+                        devmount.mount_path()
+                    );
+                    unstage_fs_volume(&NodeUnstageVolumeRequest {
+                        volume_id: volume_id.to_string(),
+                        staging_target_path: devmount.mount_path().to_string(),
+                    })
+                    .await?;
+                    trace!("Filesystem unstage done");
+                }
+            }
+        }
+        // Nvme disconnect, but fail if other mount paths are present.
+        detach(&uuid, "Failed to disconnect the nvme path".to_string()).await?;
+        trace!("nvme disconnect done");
+        Ok(Response::new(CleanupReply {}))
     }
 }
 

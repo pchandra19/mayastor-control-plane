@@ -4,7 +4,9 @@ use crate::{
 };
 use csi_driver::{
     context::{CreateParams, CreateSnapshotParams, PublishParams, QuiesceFsCandidate},
-    node::internal::{node_plugin_client::NodePluginClient, FreezeFsRequest, UnfreezeFsRequest},
+    node::internal::{
+        node_plugin_client::NodePluginClient, CleanupRequest, FreezeFsRequest, UnfreezeFsRequest,
+    },
 };
 use rpc::csi::{volume_content_source::Type, Topology as CsiTopology, *};
 use stor_port::types::v0::openapi::{
@@ -110,6 +112,20 @@ async fn issue_fs_freeze(endpoint: String, volume_id: String) -> Result<(), Stat
         }
         Err(error) => Err(error),
     }
+}
+
+#[tracing::instrument]
+async fn issue_cleanup(endpoint: String, volume_id: String) -> Result<(), Status> {
+    trace!("Issuing cleanup of stale entries before publish");
+    let mut client = NodePluginClient::connect(format!("http://{endpoint}"))
+        .await
+        .map_err(|error| Status::failed_precondition(error.to_string()))?;
+    client
+        .cleanup(Request::new(CleanupRequest {
+            volume_id: volume_id.clone(),
+        }))
+        .await
+        .map(|_| ())
 }
 
 #[tracing::instrument]
@@ -541,6 +557,18 @@ impl rpc::csi::controller_server::Controller for CsiControllerSvc {
                         Ok(_) if volume.spec.num_replicas == 1 => Ok(None),
                         Ok(_) => Ok(Some(node_id.as_str())),
                     }?;
+
+                    if let Ok(val) = std::env::var("ALLOW_CORRUPTION") {
+                        trace!("Allow corruption disabled value: {}", val);
+                        let app_node = RestApiClient::get_client().get_app_node(&args.node_id).await?;
+                        trace!("Issuing clean up to node {}, to endpoint {}", app_node.id, app_node.spec.endpoint);
+                        if let Err(err) = issue_cleanup(app_node.spec.endpoint, volume_id.to_string()).await {
+                            error!("{}" ,err.to_string());
+                            if err.code() != Code::NotFound {
+                                return Err(err.into());
+                            }
+                        }
+                    }
 
                     // Volume is not published.
                     let v = RestApiClient::get_client()

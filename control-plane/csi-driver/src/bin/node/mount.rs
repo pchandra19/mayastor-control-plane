@@ -3,9 +3,10 @@ use crate::filesystem_ops::FileSystem;
 use csi_driver::filesystem::FileSystem as Fs;
 use devinfo::mountinfo::{MountInfo, SafeMountIter};
 
+use crate::runtime;
 use std::{collections::HashSet, io::Error};
 use sys_mount::{unmount, FilesystemType, Mount, MountFlags, UnmountFlags};
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 use uuid::Uuid;
 
 // Simple trait for checking if the readonly (ro) option
@@ -28,46 +29,63 @@ impl ReadOnly for &str {
 }
 
 /// Return mountinfo matching source and/or destination.
-pub(crate) fn find_mount(source: Option<&str>, target: Option<&str>) -> Option<MountInfo> {
-    let mut found: Option<MountInfo> = None;
+pub(crate) async fn find_mount(
+    source: Option<String>,
+    target: Option<String>,
+) -> Option<MountInfo> {
+    let blocking_task = runtime::spawn_blocking(move || {
+        let mut found: Option<MountInfo> = None;
 
-    for mount in SafeMountIter::get().unwrap().flatten() {
-        if let Some(value) = source {
-            if mount.source.to_string_lossy() == value {
-                if let Some(value) = target {
-                    if mount.dest.to_string_lossy() == value {
-                        found = Some(mount);
+        for mount in SafeMountIter::get().unwrap().flatten() {
+            if let Some(value) = source.clone() {
+                if mount.source.to_string_lossy() == value {
+                    if let Some(value) = target.clone() {
+                        if mount.dest.to_string_lossy() == value {
+                            found = Some(mount);
+                        }
+                        continue;
                     }
-                    continue;
+                    found = Some(mount);
                 }
-                found = Some(mount);
+                continue;
             }
-            continue;
-        }
-        if let Some(value) = target {
-            if mount.dest.to_string_lossy() == value {
-                found = Some(mount);
+            if let Some(value) = target.clone() {
+                if mount.dest.to_string_lossy() == value {
+                    found = Some(mount);
+                }
             }
         }
-    }
 
-    found.map(MountInfo::from)
+        found.map(MountInfo::from)
+    });
+
+    blocking_task.await.unwrap_or_else(|error| {
+        error!("Failed to wait for the thread {error}");
+        None
+    })
 }
 
 /// Return all mounts for a matching source.
 /// Optionally ignore the given destination path.
-pub(crate) fn find_src_mounts(source: &str, dest_ignore: Option<&str>) -> Vec<MountInfo> {
-    SafeMountIter::get()
-        .unwrap()
-        .flatten()
-        .filter(|mount| {
-            mount.source.to_string_lossy() == source
-                && match dest_ignore {
-                    None => true,
-                    Some(ignore) => ignore != mount.dest.to_string_lossy(),
-                }
-        })
-        .collect()
+pub(crate) async fn find_src_mounts(source: String, dest_ignore: Option<String>) -> Vec<MountInfo> {
+    let blocking_task = runtime::spawn_blocking(move || {
+        SafeMountIter::get()
+            .unwrap()
+            .flatten()
+            .filter(|mount| {
+                mount.source.to_string_lossy() == source
+                    && match dest_ignore.clone() {
+                        None => true,
+                        Some(ignore) => ignore != mount.dest.to_string_lossy(),
+                    }
+            })
+            .collect()
+    });
+
+    blocking_task.await.unwrap_or_else(|error| {
+        error!("Failed to wait for the thread {error}");
+        vec![]
+    })
 }
 
 /// Check if options in "first" are also present in "second",
@@ -95,8 +113,8 @@ pub(crate) fn probe_filesystems() -> Vec<FileSystem> {
 
 // Utility function to transform a vector of options
 // to the format required by sys_mount::Mount::new()
-fn parse(options: &[String]) -> (bool, String) {
-    let mut list: Vec<&str> = Vec::new();
+fn parse(options: Vec<String>) -> (bool, String) {
+    let mut list: Vec<String> = Vec::new();
     let mut readonly: bool = false;
 
     for entry in options {
@@ -116,7 +134,7 @@ fn parse(options: &[String]) -> (bool, String) {
 }
 
 // Utility function used for displaying a list of options.
-fn show(options: &[String]) -> String {
+fn show(options: Vec<String>) -> String {
     let list: Vec<String> = options
         .iter()
         .filter(|value| value.as_str() != "rw")
@@ -131,56 +149,64 @@ fn show(options: &[String]) -> String {
 }
 
 /// Mount a device to a directory (mountpoint)
-pub(crate) fn filesystem_mount(
-    device: &str,
-    target: &str,
-    fstype: &FileSystem,
-    options: &[String],
+pub(crate) async fn filesystem_mount(
+    device: String,
+    target: String,
+    fstype: FileSystem,
+    options: Vec<String>,
 ) -> Result<Mount, Error> {
     let mut flags = MountFlags::empty();
 
-    let (readonly, value) = parse(options);
+    let (readonly, value) = parse(options.clone());
 
     if readonly {
         flags.insert(MountFlags::RDONLY);
     }
 
-    // I'm not certain if it's fine to pass "" so keep existing behaviour
-    let mount = if value.is_empty() {
-        Mount::builder()
-    } else {
-        Mount::builder().data(&value)
-    }
-    .fstype(FilesystemType::Manual(fstype.as_ref()))
-    .flags(flags)
-    .mount(device, target)?;
+    let fs = FilesystemType::Manual(Box::leak(fstype.to_string().into_boxed_str()));
+    let _target = target.clone();
+    let _device = device.clone();
+    let blocking_task = runtime::spawn_blocking(move || {
+        // I'm not certain if it's fine to pass "" so keep existing behaviour
+        let mntbuilder = if value.is_empty() {
+            Mount::builder()
+        } else {
+            Mount::builder().data(&value)
+        }
+        .fstype(fs)
+        .flags(flags);
+        mntbuilder.mount(device, target)
+    });
 
     debug!(
         "Filesystem ({}) on device {} mounted onto target {} (options: {})",
         fstype,
-        device,
-        target,
+        _device,
+        _target,
         show(options)
     );
 
+    let mount = blocking_task.await??;
     Ok(mount)
 }
 
 /// Unmount a device from a directory (mountpoint)
 /// Should not be used for removing bind mounts.
-pub(crate) fn filesystem_unmount(target: &str) -> Result<(), Error> {
+pub(crate) async fn filesystem_unmount(target: String) -> Result<(), Error> {
     let flags = UnmountFlags::empty();
     // read more about the umount system call and it's flags at `man 2 umount`
-    unmount(target, flags)?;
+    let _target = target.clone();
+    let blocking_task = runtime::spawn_blocking(move || unmount(target, flags));
 
-    debug!("Target {} unmounted", target);
+    debug!("Target {} unmounted", _target);
+    let _ = blocking_task.await??;
 
     Ok(())
 }
 
 /// Bind mount a source path to a target path.
 /// Supports both directories and files.
-pub(crate) fn bind_mount(source: &str, target: &str, file: bool) -> Result<Mount, Error> {
+pub(crate) async fn bind_mount(source: String, target: String, file: bool) -> Result<Mount, Error> {
     let mut flags = MountFlags::empty();
 
     flags.insert(MountFlags::BIND);
@@ -189,22 +215,26 @@ pub(crate) fn bind_mount(source: &str, target: &str, file: bool) -> Result<Mount
         flags.insert(MountFlags::RDONLY);
     }
 
-    let mount = Mount::builder()
+    let mntbuilder = Mount::builder()
         .fstype(FilesystemType::Manual("none"))
-        .flags(flags)
-        .mount(source, target)?;
+        .flags(flags);
 
-    debug!("Source {} bind mounted onto target {}", source, target);
+    let _source = source.clone();
+    let _target = target.clone();
+    let blocking_task = runtime::spawn_blocking(move || mntbuilder.mount(source, target));
 
+    debug!("Source {} bind mounted onto target {}", _source, _target);
+
+    let mount = blocking_task.await??;
     Ok(mount)
 }
 
 /// Bind remount a path to modify mount options.
 /// Assumes that target has already been bind mounted.
-pub(crate) fn bind_remount(target: &str, options: &[String]) -> Result<Mount, Error> {
+pub(crate) async fn bind_remount(target: String, options: Vec<String>) -> Result<Mount, Error> {
     let mut flags = MountFlags::empty();
 
-    let (readonly, value) = parse(options);
+    let (readonly, value) = parse(options.clone());
 
     flags.insert(MountFlags::BIND);
 
@@ -214,38 +244,44 @@ pub(crate) fn bind_remount(target: &str, options: &[String]) -> Result<Mount, Er
 
     flags.insert(MountFlags::REMOUNT);
 
-    let mount = if value.is_empty() {
-        Mount::builder()
-    } else {
-        Mount::builder().data(&value)
-    }
-    .fstype(FilesystemType::Manual("none"))
-    .flags(flags)
-    .mount("none", target)?;
+    let _target = target.clone();
+    let blocking_task = runtime::spawn_blocking(move || {
+        let mntbuilder = if value.is_empty() {
+            Mount::builder()
+        } else {
+            Mount::builder().data(&value)
+        }
+        .fstype(FilesystemType::Manual("none"))
+        .flags(flags);
+        mntbuilder.mount("none", target)
+    });
 
     debug!(
         "Target {} bind remounted (options: {})",
-        target,
+        _target,
         show(options)
     );
 
+    let mount = blocking_task.await??;
     Ok(mount)
 }
 
 /// Unmounts a path that has previously been bind mounted.
 /// Should not be used for unmounting devices.
-pub(crate) fn bind_unmount(target: &str) -> Result<(), Error> {
+pub(crate) async fn bind_unmount(target: String) -> Result<(), Error> {
     let flags = UnmountFlags::empty();
 
-    unmount(target, flags)?;
+    let _target = target.clone();
+    let blocking_task = runtime::spawn_blocking(move || unmount(target, flags));
 
-    debug!("Target {} bind unmounted", target);
+    debug!("Target {} bind unmounted", _target);
 
+    let _ = blocking_task.await??;
     Ok(())
 }
 
 /// Remount existing mount as read only or read write.
-pub(crate) fn remount(target: &str, ro: bool) -> Result<Mount, Error> {
+pub(crate) async fn remount(target: String, ro: bool) -> Result<Mount, Error> {
     let mut flags = MountFlags::empty();
     flags.insert(MountFlags::REMOUNT);
 
@@ -253,20 +289,23 @@ pub(crate) fn remount(target: &str, ro: bool) -> Result<Mount, Error> {
         flags.insert(MountFlags::RDONLY);
     }
 
-    let mount = Mount::builder()
+    let mntbuilder = Mount::builder()
         .fstype(FilesystemType::Manual("none"))
-        .flags(flags)
-        .mount("", target)?;
+        .flags(flags);
 
-    debug!("Target {} remounted with {}", target, flags.bits());
+    let _target = target.clone();
+    let blocking_task = runtime::spawn_blocking(move || mntbuilder.mount("", target.clone()));
 
+    debug!("Target {} remounted with {}", _target, flags.bits());
+
+    let mount = blocking_task.await??;
     Ok(mount)
 }
 
 /// Mount a block device
-pub(crate) fn blockdevice_mount(
-    source: &str,
-    target: &str,
+pub(crate) async fn blockdevice_mount(
+    source: String,
+    target: String,
     readonly: bool,
 ) -> Result<Mount, Error> {
     debug!("Mounting {} ...", source);
@@ -274,29 +313,40 @@ pub(crate) fn blockdevice_mount(
     let mut flags = MountFlags::empty();
     flags.insert(MountFlags::BIND);
 
-    let mount = Mount::builder()
+    let mntbuilder = Mount::builder()
         .fstype(FilesystemType::Manual("none"))
-        .flags(flags)
-        .mount(source, target)?;
-    info!("Block device {} mounted to {}", source, target,);
+        .flags(flags);
+
+    let _source = source.clone();
+    let _target = target.clone();
+    let blocking_task = runtime::spawn_blocking(move || mntbuilder.mount(source, target));
+
+    info!("Block device {} mounted to {}", _source, _target);
 
     if readonly {
         flags.insert(MountFlags::REMOUNT);
         flags.insert(MountFlags::RDONLY);
 
-        let mount = Mount::builder()
+        let mntbuilder = Mount::builder()
             .fstype(FilesystemType::Manual(""))
-            .flags(flags)
-            .mount("", target)?;
-        info!("Remounted block device {} (readonly) to {}", source, target);
+            .flags(flags);
+        let __target = _target.clone();
+        let blocking_task = runtime::spawn_blocking(move || mntbuilder.mount("", _target));
+        info!(
+            "Remounted block device {} (readonly) to {}",
+            _source, __target
+        );
+
+        let mount = blocking_task.await??;
         return Ok(mount);
     }
 
+    let mount = blocking_task.await??;
     Ok(mount)
 }
 
 /// Unmount a block device.
-pub(crate) fn blockdevice_unmount(target: &str) -> Result<(), Error> {
+pub(crate) async fn blockdevice_unmount(target: String) -> Result<(), Error> {
     let flags = UnmountFlags::empty();
 
     debug!(
@@ -305,8 +355,11 @@ pub(crate) fn blockdevice_unmount(target: &str) -> Result<(), Error> {
         flags.bits()
     );
 
-    unmount(target, flags)?;
-    info!("block device at {} has been unmounted", target);
+    let _target = target.clone();
+    let blocking_task = runtime::spawn_blocking(move || unmount(target.clone(), flags));
+    let _ = blocking_task.await??;
+
+    info!("block device at {} has been unmounted", _target);
     Ok(())
 }
 
@@ -364,17 +417,17 @@ async fn wait_file_removal(
 }
 
 /// If the filesystem uuid doesn't match with the provided uuid, unmount the device.
-pub(crate) fn unmount_on_fs_id_diff(
-    device_path: &str,
-    fs_staging_path: &str,
-    volume_uuid: &Uuid,
+pub(crate) async fn unmount_on_fs_id_diff(
+    device_path: String,
+    fs_staging_path: String,
+    volume_uuid: Uuid,
 ) -> Result<(), String> {
-    if let Ok(probed_uuid) = FileSystem::property(device_path, "UUID") {
+    if let Ok(probed_uuid) = FileSystem::property(device_path.clone(), "UUID".to_string()) {
         if probed_uuid == volume_uuid.to_string() {
             return Ok(());
         }
     }
-    filesystem_unmount(fs_staging_path).map_err(|error| {
+    filesystem_unmount(fs_staging_path.clone()).await.map_err(|error| {
         format!(
             "Failed to unmount on fs id difference, device {device_path} from {fs_staging_path} for {volume_uuid}, {error}",
         )
