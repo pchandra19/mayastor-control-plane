@@ -163,10 +163,11 @@ pub(crate) async fn filesystem_mount(
         flags.insert(MountFlags::RDONLY);
     }
 
-    let fs = FilesystemType::Manual(Box::leak(fstype.to_string().into_boxed_str()));
+    let _fstype = fstype.clone();
     let _target = target.clone();
     let _device = device.clone();
     let blocking_task = runtime::spawn_blocking(move || {
+        let fs = FilesystemType::Manual(fstype.as_ref());
         // I'm not certain if it's fine to pass "" so keep existing behaviour
         let mntbuilder = if value.is_empty() {
             Mount::builder()
@@ -180,7 +181,7 @@ pub(crate) async fn filesystem_mount(
 
     debug!(
         "Filesystem ({}) on device {} mounted onto target {} (options: {})",
-        fstype,
+        _fstype,
         _device,
         _target,
         show(options)
