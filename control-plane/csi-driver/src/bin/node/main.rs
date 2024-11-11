@@ -30,6 +30,7 @@ mod main_;
 mod match_dev;
 #[cfg(target_os = "linux")]
 mod mount;
+mod mount_utils;
 #[cfg(target_os = "linux")]
 mod node;
 #[cfg(target_os = "linux")]

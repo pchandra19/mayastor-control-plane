@@ -9,6 +9,7 @@ use crate::{
     identity::Identity,
     k8s::patch_k8s_node,
     mount::probe_filesystems,
+    mount_utils::bin::flag::{parse_mount_flags, parse_unmount_flags},
     node::{Node, RDMA_CONNECT_CHECK},
     nodeplugin_grpc::NodePluginGrpcServer,
     nodeplugin_nvme::NvmeOperationsSvc,
@@ -21,7 +22,7 @@ use stor_port::platform;
 use utils::tracing_telemetry::{FmtLayer, FmtStyle};
 
 use crate::client::AppNodesClientWrapper;
-use clap::Arg;
+use clap::{Arg, ArgMatches};
 use futures::TryFutureExt;
 use serde_json::json;
 use std::{
@@ -255,6 +256,49 @@ pub(super) async fn main() -> anyhow::Result<()> {
                         .help("Uuid of the volume to unfreeze")
                 )
         )
+        .subcommand(
+            clap::Command::new("mount")
+                .arg(
+                    Arg::new("src-path")
+                        .long("src-path")
+                        .value_name("PATH")
+                        .required(true)
+                        .help("Mount src path")
+                )
+                .arg(
+                    Arg::new("dsc-path")
+                        .long("dsc-path")
+                        .value_name("PATH")
+                        .required(true)
+                        .help("Mount dsc path")
+                )
+                .arg(
+                    Arg::new("mount-flags")
+                        .long("mount-flags")
+                        .value_name("STRING")
+                        // .value_parser(parse_mount_flags)
+                        .required(true)
+                        .help("Mount flags")
+                )
+        )
+        .subcommand(
+            clap::Command::new("unmount")
+                .arg(
+                    Arg::new("target-path")
+                        .long("target-path")
+                        .value_name("PATH")
+                        .required(true)
+                        .help("Unmount target path")
+                )
+                .arg(
+                    Arg::new("unmount-flags")
+                        .long("unmount-flags")
+                        .value_name("STRING")
+                        // .value_parser(parse_unmount_flags)
+                        .required(true)
+                        .help("Unmount flags")
+                )
+        )
         .get_matches();
     let tags = utils::tracing_telemetry::default_tracing_tags(
         utils::raw_version_str(),
@@ -282,6 +326,36 @@ pub(super) async fn main() -> anyhow::Result<()> {
         }?;
         return Ok(());
     }
+
+    // // Handle fs-freeze and fs-unfreeze commands.
+    // if let Some(cmd) = matches.subcommand() {
+    //     utils::tracing_telemetry::TracingTelemetry::builder()
+    //         .with_writer(FmtLayer::Stderr)
+    //         .with_style(FmtStyle::Compact)
+    //         .with_colours(false)
+    //         .with_tracing_tags(tags)
+    //         .init("csi-node");
+    //     return match cmd {
+    //         ("mount", arg_matches) => {
+    //             let src_path = arg_matches.get_one::<String>("src-path").unwrap();
+    //             let dsc_path = arg_matches.get_one::<String>("dsc-path").unwrap();
+    //             let flags = arg_matches
+    //                 .get_one::<sys_mount::MountFlags>("mount-flags")
+    //                 .unwrap();
+    //             info!("{}, {}, {:?}", src_path, dsc_path, flags);
+    //             Ok(())
+    //         }
+    //         ("unmount", arg_matches) => {
+    //             let target_path = arg_matches.get_one::<String>("target-path").unwrap();
+    //             let flags = arg_matches
+    //                 .get_one::<sys_mount::MountFlags>("unmount-flags")
+    //                 .unwrap();
+    //             info!("{}, {:?}", target_path, flags);
+    //             Ok(())
+    //         }
+    //         _ => Err(anyhow::bail!("Invalid"))
+    //     }
+    // }
 
     // Print package info and command line arguments.
     utils::print_package_info!();
