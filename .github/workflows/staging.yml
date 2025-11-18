@@ -37,8 +37,12 @@ jobs:
 
       - name: Validate if the staging should be even made
         run: |
-          nix-shell ./utils/dependencies/scripts/staging/shell.nix --pure --keep CI --run "./utils/dependencies/scripts/staging/validate.sh \
-            --tag ${TAG} \
+          nix-shell ./utils/dependencies/scripts/staging/shell.nix \
+          --pure \
+          --keep CI \
+          --keep TAG \
+          --run "./utils/dependencies/scripts/staging/validate.sh \
+            --tag ${{ env.TAG }} \
             --type staging"
 
   build-images:
