@@ -66,6 +66,6 @@ jobs:
       - name: Mirror images from dev to Docker Hub
         run: |
           nix-shell ./utils/dependencies/scripts/staging/shell.nix --pure --run "./utils/dependencies/scripts/staging/mirror-images.sh \
-            --source ghcr.io/${{ github.repository_owner }}/dev \
+            --source ghcr.io/${{ github.repository_owner }}/mayastor/dev \
             --target docker.io/${{ github.repository_owner }} \
             --tag ${{ github.ref_name }}"

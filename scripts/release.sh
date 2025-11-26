@@ -19,4 +19,6 @@ CARGO_DEPS=control-plane.project-builder.cargoDeps
 PROJECT="controller"
 . "$SOURCE_REL"
 
-common_run $@
+if [ "${NO_RUN:-}" != "true" ]; then
+  common_run "$@"
+fi
